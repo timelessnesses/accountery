@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { store, currency, type AllocatedWeek } from './payments.svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { currency, type AllocatedWeek } from './payments.svelte';
+	import { lightbox } from './LightboxManager.svelte';
 
 	// Replace this with your own payment QR image URL.
-	const QR_SRC = '/qr-placeholder.png';
+	const QR_SRC = '/cropped-qr.jpg';
 
-	let { selectedWeek }: { selectedWeek?: AllocatedWeek } = $props();
+	let { selectedWeek, nextDue }: { selectedWeek?: AllocatedWeek; nextDue?: AllocatedWeek } = $props();
 
 	let amount = $state<number | null>(null);
 	let note = $state('');
@@ -15,7 +17,7 @@
 
 	// Prefill amount with what's needed to clear the next due / selected week.
 	$effect(() => {
-		const target = selectedWeek ?? store.nextDue;
+		const target = selectedWeek ?? nextDue;
 		if (target && amount === null) {
 			amount = target.remaining;
 		}
@@ -38,20 +40,33 @@
 		proofName = '';
 	}
 
-	function submit(e: SubmitEvent) {
+	async function submit(e: SubmitEvent) {
 		e.preventDefault();
 		if (!amount || amount <= 0) return;
 		submitting = true;
-		store.addPayment({ amount, note: note.trim() || undefined, proof });
-		amount = null;
-		note = '';
-		clearProof();
-		submitting = false;
-		justSaved = true;
-		setTimeout(() => (justSaved = false), 2500);
+		try {
+			const response = await fetch('/api/payments', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ amount, note: note.trim() || undefined, proof })
+			});
+
+			if (!response.ok) {
+				throw new Error('Payment save failed');
+			}
+
+			amount = null;
+			note = '';
+			clearProof();
+			justSaved = true;
+			setTimeout(() => (justSaved = false), 2500);
+			await invalidateAll();
+		} finally {
+			submitting = false;
+		}
 	}
 
-	const target = $derived(selectedWeek ?? store.nextDue);
+	const target = $derived(selectedWeek ?? nextDue);
 </script>
 
 <div class="flex flex-col gap-5">
@@ -66,8 +81,11 @@
 			{/if}
 		</div>
 		<div class="mt-4 flex flex-col items-center gap-3">
-			<div
-				class="flex h-44 w-44 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted"
+			<button
+				type="button"
+				onclick={() => lightbox.open(QR_SRC, 'Payment QR code')}
+				class="flex h-44 w-44 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted transition hover:border-primary"
+				aria-label="Enlarge payment QR code"
 			>
 				<img
 					src={QR_SRC}
@@ -75,9 +93,9 @@
 					class="h-full w-full object-contain"
 					onerror={(e) => ((e.currentTarget as HTMLImageElement).style.opacity = '0.25')}
 				/>
-			</div>
+			</button>
 			<p class="text-center text-xs leading-relaxed text-muted-foreground text-balance">
-				Scan the code with your banking app, then upload your receipt below.
+				Tap the code to enlarge, scan it with your banking app, then upload your receipt below.
 			</p>
 		</div>
 	</div>
@@ -107,11 +125,12 @@
 			</label>
 
 			<label class="flex flex-col gap-1.5">
-				<span class="text-xs font-medium text-muted-foreground">Note (optional)</span>
+				<span class="text-xs font-medium text-muted-foreground">Note</span>
 				<input
 					type="text"
 					bind:value={note}
 					placeholder="e.g. reference number"
+					required
 					class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 				/>
 			</label>
@@ -120,7 +139,14 @@
 				<span class="text-xs font-medium text-muted-foreground">Proof of payment</span>
 				{#if proof}
 					<div class="flex items-center gap-3 rounded-lg border border-border bg-muted p-2">
-						<img src={proof} alt="Payment proof preview" class="h-14 w-14 rounded object-cover" />
+						<button
+							type="button"
+							onclick={() => proof && lightbox.open(proof, 'Payment proof preview')}
+							class="shrink-0 overflow-hidden rounded transition hover:opacity-80"
+							aria-label="Enlarge payment proof"
+						>
+							<img src={proof} alt="Payment proof preview" class="h-14 w-14 object-cover" />
+						</button>
 						<span class="flex-1 truncate text-xs text-muted-foreground">{proofName}</span>
 						<button
 							type="button"
@@ -134,7 +160,14 @@
 					<label
 						class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-background px-3 py-4 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary"
 					>
-						<input type="file" accept="image/*" capture="environment" class="hidden" onchange={onFile} />
+						<input
+							type="file"
+							accept="image/*"
+							capture="environment"
+							class="hidden"
+							required
+							onchange={onFile}
+						/>
 						Upload a screenshot or photo
 					</label>
 				{/if}
@@ -142,7 +175,7 @@
 
 			<button
 				type="submit"
-				disabled={submitting || !amount}
+				disabled={submitting || !amount || !note.trim() || !proof}
 				class="mt-1 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				{justSaved ? 'Payment recorded' : 'Submit payment'}

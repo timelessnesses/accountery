@@ -1,11 +1,16 @@
 <script lang="ts">
 	import PaymentCalendar from '$lib/PaymentCalendar.svelte';
 	import PaymentForm from '$lib/PaymentForm.svelte';
-	import { store, currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
+	import TransactionLog from '$lib/TransactionLog.svelte';
+	import Lightbox from '$lib/Lightbox.svelte';
+	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
+	import { administrators } from '$lib/whitelisted.js';
+
+	let { data } = $props();
 
 	let selectedWeek = $state<AllocatedWeek | undefined>(undefined);
 	// Mobile: which panel is shown via the bottom toolbar.
-	let mobilePanel = $state<'calendar' | 'pay'>('calendar');
+	let mobilePanel = $state<'calendar' | 'pay' | 'history'>('calendar');
 
 	function handleSelect(w: AllocatedWeek) {
 		selectedWeek = w;
@@ -17,6 +22,12 @@
 		partial: { label: 'Partial', dot: 'bg-warning', text: 'text-warning' },
 		unpaid: { label: 'Unpaid', dot: 'bg-danger', text: 'text-danger' }
 	} as const;
+
+	const totalPaid = $derived(data.transactions.reduce((sum, tx) => sum + tx.amount, 0));
+	const totalOwed = $derived(data.obligations.reduce((sum, ob) => sum + ob.amount, 0));
+	const adminDisabled = $derived(
+		Object.keys(administrators).includes(data.user?.email.split('@')[0] ?? '') === false
+	);
 </script>
 
 <div class="flex h-dvh flex-col bg-background">
@@ -24,8 +35,8 @@
 	<header class="border-b border-border bg-card">
 		<div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
 			<div class="flex items-center gap-3">
-				<div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4m8-4v4"/></svg>
+				<div class="flex h-15 w-15 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+					<svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4m8-4v4"/></svg>
 				</div>
 				<div>
 					<h1 class="text-sm font-semibold leading-tight text-card-foreground">Weekly Payments</h1>
@@ -35,24 +46,34 @@
 			<div class="hidden items-center gap-6 sm:flex">
 				<div class="text-right">
 					<p class="text-xs text-muted-foreground">Paid</p>
-					<p class="text-sm font-semibold text-success">{currency.format(store.totalPaid)}</p>
+					<p class="text-sm font-semibold text-success">{currency.format(totalPaid)}</p>
 				</div>
 				<div class="text-right">
 					<p class="text-xs text-muted-foreground">Owed</p>
-					<p class="text-sm font-semibold text-foreground">{currency.format(store.totalOwed)}</p>
+					<p class="text-sm font-semibold text-foreground">{currency.format(totalOwed)}</p>
 				</div>
 				<button
-					onclick={() => store.reset()}
+					onclick={() => window.location.href = '/admin'}
 					class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+					disabled={adminDisabled}
 				>
-					Reset demo
+					Adminstrator Access
 				</button>
 			</div>
 		</div>
 	</header>
 
-	<!-- Body: two panels on wide screens -->
+	<!-- Body: transaction log + calendar + payment panel on wide screens -->
 	<main class="mx-auto flex w-full max-w-7xl flex-1 gap-6 overflow-hidden p-4 sm:px-6 sm:py-6">
+		<!-- Transaction log (left of calendar on wide screens, History tab on mobile) -->
+		<aside
+			class="min-h-0 w-full shrink-0 lg:block lg:w-[240px] {mobilePanel === 'history'
+				? 'block'
+				: 'hidden'}"
+		>
+			<TransactionLog transactions={data.transactions} />
+		</aside>
+
 		<!-- Calendar panel -->
 		<section
 			class="min-h-0 flex-1 flex-col rounded-xl border border-border bg-card p-3 sm:p-4 {mobilePanel ===
@@ -69,7 +90,7 @@
 				{/each}
 			</div>
 			<div class="min-h-0 flex-1">
-				<PaymentCalendar weeks={store.allocated} onselect={handleSelect} />
+				<PaymentCalendar weeks={data.allocatedWeeks} onselect={handleSelect} />
 			</div>
 		</section>
 
@@ -102,7 +123,7 @@
 					</div>
 				</div>
 			{/if}
-			<PaymentForm {selectedWeek} />
+			<PaymentForm {selectedWeek} nextDue={data.nextDue} />
 		</aside>
 	</main>
 
@@ -122,6 +143,16 @@
 			Calendar
 		</button>
 		<button
+			onclick={() => (mobilePanel = 'history')}
+			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium {mobilePanel ===
+			'history'
+				? 'text-primary'
+				: 'text-muted-foreground'}"
+		>
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+			History
+		</button>
+		<button
 			onclick={() => (mobilePanel = 'pay')}
 			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium {mobilePanel ===
 			'pay'
@@ -133,3 +164,5 @@
 		</button>
 	</nav>
 </div>
+
+<Lightbox />

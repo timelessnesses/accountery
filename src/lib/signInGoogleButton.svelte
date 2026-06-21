@@ -14,7 +14,9 @@
                     id_token: response.credential
                 })
             }
-        ).then(res => res.json()).then(data => {
+        ).then(res => res.json<{
+            token: string;
+        }>()).then(data => {
             console.log("Received session token:", data.token);
             document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`;
             window.location.href = "/";
@@ -25,19 +27,24 @@
 
     onMount(() => {
         console.log("PUBLIC_GOOGLE_OAUTH_CLIENT_ID", PUBLIC_GOOGLE_OAUTH_CLIENT_ID);
+        // @ts-expect-error - window.google is there
         while (!window.google) {
             console.log("Waiting for Google API to load...");
         }
+        // @ts-expect-error - window.google is there
         if (window.google) {
+            // @ts-expect-error - window.google is there
             window.google.accounts.id.initialize({
                 client_id: PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
                 callback: handleLoginRequest,
                 hd: "tsu.ac.th"
             });
+            // @ts-expect-error - window.google is there
             window.google.accounts.id.renderButton(
                 document.getElementById("google-button")!,
                 { theme: "filled_blue", size: "large", text: "signin_with", width: 600, height: 200 }
             );
+            // @ts-expect-error - window.google is there
             window.google.accounts.id.prompt();
         }
     })

@@ -27,7 +27,7 @@
 		return list.map((w) => ({
 			id: w.id,
 			start: w.weekStart,
-			end: addDaysLocal(w.weekStart, 7),
+			end: addDaysLocal(w.weekStart, 8),
 			allDay: true,
 			title:
 				w.status === 'paid'
@@ -62,7 +62,7 @@
 			plugins: [dayGridPlugin, interactionPlugin],
 			initialView: 'dayGridMonth',
 			height: '100%',
-			firstDay: 1,
+			firstDay: 0,
 			headerToolbar: {
 				left: 'prev,next today',
 				center: 'title',
