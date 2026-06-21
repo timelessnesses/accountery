@@ -1,0 +1,3 @@
+[submodule "accounting-cron"]
+	path = accounting-cron
+	url = https://github.com/timelessnesses/accountery-cron.git
