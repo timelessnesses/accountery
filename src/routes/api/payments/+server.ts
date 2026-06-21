@@ -17,7 +17,7 @@ export const POST = async ({ locals, platform, request }) => {
 	}
 
 	const imageBytes = dataUrlToBytes(body.proof);
-	const res = buildPublicCDNUrl((await platform?.env.AccountingReceipts.put(`${Date.now()}-${locals.user.email}.png`, imageBytes))?.key as string);
+	const res = (await platform?.env.AccountingReceipts.put(`${new Date().toISOString()}-${locals.user.email}.png`, imageBytes))?.key;
 
 	await accountingDatabase
 		.prepare(
@@ -29,7 +29,7 @@ export const POST = async ({ locals, platform, request }) => {
 			body.note?.trim() || 'Payment',
 			Date.now(),
 			'payment',
-			res
+			"/api/payments/" + res
 		)
 		.run();
 

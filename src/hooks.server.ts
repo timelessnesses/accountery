@@ -7,9 +7,16 @@ export const handle: Handle = async ({ event, resolve }) => {
     const env = event.platform?.env as Env;
     const token = event.cookies.get("token");
     if (token) {
-        const user = await verifySessionToken(token, env);
-        if (user) {
-            event.locals.user = user;
+        try {
+            const user = await verifySessionToken(token, env);
+            if (user) {
+                event.locals.user = user;
+            }
+        } catch (error) {
+            console.error("Error verifying session token:", error);
+            event.locals.user = undefined;
+            delete event.cookies["token"];
+            /* return redirect(302, "/login"); */
         }
     }
     const path = event.url.pathname;
