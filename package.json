@@ -36,5 +36,14 @@
 		"typescript-eslint": "^8.58.1",
 		"vite": "^8.0.7",
 		"wrangler": "^4.103.0"
+	},
+	"dependencies": {
+		"@fullcalendar/core": "^6.1.21",
+		"@fullcalendar/daygrid": "^6.1.21",
+		"@fullcalendar/interaction": "^6.1.21",
+		"@tailwindcss/vite": "^4.3.1",
+		"google-auth-library": "^10.7.0",
+		"jose": "^6.2.3",
+		"tailwindcss": "^4.3.1"
 	}
 }
