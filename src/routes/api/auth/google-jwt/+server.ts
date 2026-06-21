@@ -44,7 +44,7 @@ async function issuingNewSessionToken(studentEmail: string, database: D1Database
     const studentID = studentEmail.split("@")[0];
     const sessionToken = randomString(64);
     // 1 hour
-    const sessionTokenExpiry = Math.floor(Date.now() / 1000) + 1000 * 60 * 60;
+    const sessionTokenExpiry = Math.floor(Date.now() / 1000) + 3600;
     const studentInfo = linkedUserAccountWithInfo[parseInt(studentID) as keyof typeof linkedUserAccountWithInfo];
     const studentName = studentInfo.name;
     const studentNickname = studentInfo.nickname;
