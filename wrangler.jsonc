@@ -25,6 +25,12 @@
 			"database_name": "accountingdb",
 			"database_id": "a91aeecd-0238-40c9-8506-0382f0ec850f"
 		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "accounting-receipts",
+			"binding": "AccountingReceipts"
+		}
 	]
 	/**
 	 * Smart Placement
