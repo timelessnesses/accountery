@@ -19,7 +19,6 @@ export type Transaction = {
 export type Obligation = {
     id: number;
     start_date: Date;
-    end_date: Date;
     amount: number;
     description: string;
 }

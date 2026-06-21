@@ -45,6 +45,15 @@
 			</div>
 			<div class="hidden items-center gap-6 sm:flex">
 				<div class="text-right">
+					{#if totalPaid < totalOwed}
+						<p class="text-xl text-muted-foreground">Net Balance</p>
+						<p class="text-sm font-bold text-red-500">{currency.format(totalPaid - totalOwed)}</p>
+					{:else}
+						<p class="text-xl text-muted-foreground">Net Balance</p>
+						<p class="text-sm font-bold text-success">{currency.format(totalPaid - totalOwed)}</p>
+					{/if}
+				</div>
+				<div class="text-right">
 					<p class="text-xs text-muted-foreground">Paid</p>
 					<p class="text-sm font-semibold text-success">{currency.format(totalPaid)}</p>
 				</div>

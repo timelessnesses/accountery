@@ -41,9 +41,9 @@ export const load = async ({ locals, platform }) => {
         "SELECT * FROM obligations"
     )).all<Obligation>()).results.map((obligation) => ({
         ...obligation,
-        start_date: new Date(obligation.start_date),
-        end_date: new Date(obligation.end_date)
+        start_date: new Date((obligation.start_date as unknown as number) * 1000),
     })) as Obligation[];
+    console.log(allObligations);
     const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
     const nextDue = allocatedWeeks.find((week) => week.status !== 'paid');
 
