@@ -14,6 +14,7 @@ export type Transaction = {
     date: Date;
     type: string;
     image: string;
+    approved: 'approved' | 'pending' | 'rejected';
 };
 
 export type Obligation = {

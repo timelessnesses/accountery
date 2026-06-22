@@ -14,13 +14,15 @@
 	const STATUS_CLASS: Record<AllocatedWeek['status'], string> = {
 		paid: 'week-paid',
 		partial: 'week-partial',
-		unpaid: 'week-unpaid'
+		unpaid: 'week-unpaid',
+		waiting_approval: 'week-waiting-approval'
 	};
 
 	const STATUS_COLOR: Record<AllocatedWeek['status'], string> = {
 		paid: 'var(--color-success)',
 		partial: 'var(--color-warning)',
-		unpaid: 'var(--color-danger)'
+		unpaid: 'var(--color-danger)',
+		waiting_approval: 'var(--color-info)'
 	};
 
 	function buildEvents(list: AllocatedWeek[]) {
@@ -32,7 +34,11 @@
 			title:
 				w.status === 'paid'
 					? `Paid · ${currency.format(w.cost)}`
-					: `${currency.format(w.remaining)} left of ${currency.format(w.cost)}`,
+					: w.status === 'partial'
+					? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
+					: w.status === 'waiting_approval'
+					? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
+					: `Unpaid · ${currency.format(w.cost)}`,
 			backgroundColor: STATUS_COLOR[w.status],
 			borderColor: STATUS_COLOR[w.status],
 			textColor: '#fff',

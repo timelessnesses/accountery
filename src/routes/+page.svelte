@@ -20,10 +20,12 @@
 	const statusMeta = {
 		paid: { label: 'Paid', dot: 'bg-success', text: 'text-success' },
 		partial: { label: 'Partial', dot: 'bg-warning', text: 'text-warning' },
-		unpaid: { label: 'Unpaid', dot: 'bg-danger', text: 'text-danger' }
+		unpaid: { label: 'Unpaid', dot: 'bg-danger', text: 'text-danger' },
+		waiting_approval: { label: 'Waiting approval', dot: 'bg-info', text: 'text-info' }
 	} as const;
 
-	const totalPaid = $derived(data.transactions.reduce((sum, tx) => sum + tx.amount, 0));
+	const totalPaid = $derived([...data.transaction].filter((tx) => tx.approved === 'approved').reduce((sum, tx) => sum + tx.amount, 0));
+	const totalPending = $derived([...data.transaction].filter((tx) => tx.approved === 'pending').reduce((sum, tx) => sum + tx.amount, 0));
 	const totalOwed = $derived(data.obligations.reduce((sum, ob) => sum + ob.amount, 0));
 	const adminDisabled = $derived(
 		Object.keys(administrators).includes(data.user?.email.split('@')[0] ?? '') === false
@@ -52,18 +54,24 @@
 						<p class="text-xl text-muted-foreground">Net Balance</p>
 						<p class="text-sm font-bold text-success">{currency.format(totalPaid - totalOwed)}</p>
 					{/if}
+					<p class="text-xs text-muted-foreground">&nbsp;</p>
 				</div>
 				<div class="text-right">
 					<p class="text-xs text-muted-foreground">Paid</p>
 					<p class="text-sm font-semibold text-success">{currency.format(totalPaid)}</p>
+					<p class="text-xs text-muted-foreground">+ {currency.format(totalPending)}</p>
 				</div>
 				<div class="text-right">
 					<p class="text-xs text-muted-foreground">Owed</p>
 					<p class="text-sm font-semibold text-foreground">{currency.format(totalOwed)}</p>
+					<p class="text-xs text-muted-foreground">&nbsp;</p>
 				</div>
 				<button
 					onclick={() => window.location.href = '/admin'}
 					class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+					style={
+						adminDisabled ? "visibility: hidden; pointer-events: none; opacity: 0.5;" : ""
+					}
 					disabled={adminDisabled}
 				>
 					Adminstrator Access
@@ -80,7 +88,7 @@
 				? 'block'
 				: 'hidden'}"
 		>
-			<TransactionLog transactions={data.transactions} />
+			<TransactionLog transactions={data.transaction} />
 		</aside>
 
 		<!-- Calendar panel -->
@@ -127,7 +135,7 @@
 						<span class="h-2 w-2 rounded-full {meta.dot}"></span>
 						<span class="text-xs font-medium {meta.text}">{meta.label}</span>
 						<span class="ml-auto text-xs text-muted-foreground">
-							{currency.format(selectedWeek.allocated)} / {currency.format(selectedWeek.cost)}
+							{currency.format(selectedWeek.allocated) + (selectedWeek.status === 'waiting_approval' ? ' + ' + currency.format(selectedWeek.pendingAllocated) : '')} / {currency.format(selectedWeek.cost)}
 						</span>
 					</div>
 				</div>

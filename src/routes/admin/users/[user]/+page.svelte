@@ -2,4 +2,4 @@
 
 </script>
 
-<h1>Admin</h1>
+<h1>User</h1>
