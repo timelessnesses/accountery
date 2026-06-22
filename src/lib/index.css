@@ -28,6 +28,10 @@
 	--color-warning: oklch(0.75 0.15 75);
 	--color-warning-muted: oklch(0.95 0.06 75);
 
+	--color-info: oklch(0.6 0.16 240);
+	--color-info-foreground: oklch(0.99 0 0);
+	--color-info-muted: oklch(0.94 0.05 240);
+
 	--radius: 0.75rem;
 }
 
@@ -103,6 +107,9 @@ body {
 }
 .fc .fc-day.week-partial {
 	background-color: var(--color-warning-muted);
+}
+.fc .fc-day.week-waiting-approval {
+	background-color: var(--color-info-muted);
 }
 
 .fc .fc-daygrid-event {

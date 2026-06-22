@@ -5,28 +5,76 @@ function toISODate(value: Date | string): string {
     return new Date(value).toISOString().slice(0, 10);
 }
 
-function buildAllocatedWeeks(obligations: Obligation[], transactions: Transaction[]): AllocatedWeek[] {
-    const sortedObligations = [...obligations].sort(
-        (a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
-    );
-    let remainingPayments = transactions.reduce((sum, tx) => sum + tx.amount, 0);
+function buildAllocatedWeeks(
+	obligations: Obligation[],
+	transactions: Transaction[]
+): AllocatedWeek[] {
+	const sortedObligations = [...obligations].sort(
+		(a, b) =>
+			new Date(a.start_date).getTime() -
+			new Date(b.start_date).getTime()
+	);
 
-    return sortedObligations.map((obligation) => {
-        const allocated = Math.max(0, Math.min(obligation.amount, remainingPayments));
-        remainingPayments -= allocated;
-        const remaining = obligation.amount - allocated;
-        const status = remaining <= 0 ? 'paid' : allocated > 0 ? 'partial' : 'unpaid';
+	let approvedFunds = transactions
+		.filter((tx) => tx.approved === "approved")
+		.reduce((sum, tx) => sum + tx.amount, 0);
 
-        return {
-            id: obligation.id.toString(),
-            weekStart: toISODate(obligation.start_date),
-            label: obligation.description,
-            cost: obligation.amount,
-            allocated,
-            remaining,
-            status
-        };
-    });
+	let pendingFunds = transactions
+		.filter((tx) => tx.approved === "pending")
+		.reduce((sum, tx) => sum + tx.amount, 0);
+
+	return sortedObligations.map((obligation) => {
+		const cost = obligation.amount;
+
+		let allocated = 0;
+		let pendingAllocated = 0;
+
+		// consume approved funds first
+		if (approvedFunds > 0) {
+			allocated = Math.min(approvedFunds, cost);
+			approvedFunds -= allocated;
+		}
+
+		let remaining = cost - allocated;
+
+		// consume pending funds second
+		if (remaining > 0 && pendingFunds > 0) {
+			pendingAllocated = Math.min(
+				pendingFunds,
+				remaining
+			);
+
+			pendingFunds -= pendingAllocated;
+			remaining -= pendingAllocated;
+		}
+
+		let status: AllocatedWeek["status"];
+
+        if (remaining === 0 && pendingAllocated === 0) {
+            status = "paid";
+        } else if (pendingAllocated > 0) {
+            status = "waiting_approval";
+        } else if (allocated > 0) {
+            status = "partial";
+        } else {
+            status = "unpaid";
+        }
+
+		return {
+			id: obligation.id.toString(),
+			weekStart: toISODate(obligation.start_date),
+			label: obligation.description,
+
+			cost,
+
+			allocated: allocated,
+
+			remaining,
+			pendingAllocated: pendingAllocated,
+
+			status
+		};
+	});
 }
 
 export const load = async ({ locals, platform }) => {
@@ -49,7 +97,7 @@ export const load = async ({ locals, platform }) => {
 
     return {
         user: locals.user,
-        transactions: allTransactionsFromUser,
+        transaction: allTransactionsFromUser,
         obligations: allObligations,
         allocatedWeeks,
         nextDue

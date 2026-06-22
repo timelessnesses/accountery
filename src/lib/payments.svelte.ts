@@ -1,7 +1,7 @@
 // Domain types + reactive store for weekly payment obligations.
 // Persistence: client-side localStorage (mock). No backend.
 
-export type WeekStatus = 'paid' | 'partial' | 'unpaid';
+export type WeekStatus = 'paid' | 'partial' | 'unpaid' | 'waiting_approval';
 
 export interface Obligation {
 	id: string;
@@ -24,6 +24,7 @@ export interface Payment {
 export interface AllocatedWeek extends Obligation {
 	allocated: number;
 	remaining: number;
+	pendingAllocated: number;
 	status: WeekStatus;
 }
 

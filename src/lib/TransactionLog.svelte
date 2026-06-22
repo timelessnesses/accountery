@@ -44,7 +44,7 @@
 					</span>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-baseline justify-between gap-2">
-							<span class="text-sm font-semibold tabular-nums text-card-foreground"
+							<span class={"text-sm font-semibold tabular-nums text-card-foreground " + (p.approved === 'approved' ? 'text-success' : p.approved === 'pending' ? 'text-warning' : 'text-danger')}
 								>{currency.format(p.amount)}</span
 							>
 						</div>
