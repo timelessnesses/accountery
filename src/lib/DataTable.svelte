@@ -1,5 +1,6 @@
 <script lang="ts" generics="T">
 	import type { Snippet } from "svelte";
+	import * as Table from "./components/ui/table";
 
 	type Props = {
 		data: T[];
@@ -58,45 +59,49 @@
 		class="w-full rounded-md border px-3 py-2"
 	/>
 
-	<div class="rounded-md border">
-		<table class="w-full">
-			<thead>
-				<tr>
+	<div class="overflow-x-auto">
+		<div class="rounded-md border">
+		<Table.Root class="w-full">
+			<Table.Header>
+				<Table.Row>
 					{#if selectable}
-						<th class="w-10"></th>
+						<Table.Head class="w-10"></Table.Head>
 					{/if}
 
 					{@render header()}
 
 					{#if actions}
-						<th class="w-[50px]"></th>
+						<Table.Head class="w-[50px]"></Table.Head>
 					{/if}
-				</tr>
-			</thead>
+				</Table.Row>
+			</Table.Header>
 
-			<tbody>
+			<Table.Body>
 				{#each filteredData as item, index}
-					<tr class="border-t hover:bg-muted/50">
+					<Table.Row class={index % 2 === 0
+        ? "bg-background"
+        : "bg-muted/20"}>
 						{#if selectable}
-							<td>
+							<Table.Cell>
 								<input
 									type="checkbox"
 									checked={selected.has(index)}
 									onchange={() => toggleRow(index)}
 								/>
-							</td>
+							</Table.Cell>
 						{/if}
 
 						{@render row(item)}
 
 						{#if actions}
-							<td class="text-right">
+							<Table.Cell class="text-right">
 								{@render actions(item)}
-							</td>
+							</Table.Cell>
 						{/if}
-					</tr>
+					</Table.Row>
 				{/each}
-			</tbody>
-		</table>
+			</Table.Body>
+		</Table.Root>
+	</div>
 	</div>
 </div>

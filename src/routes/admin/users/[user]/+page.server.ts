@@ -1,5 +1,5 @@
-import type { Transaction } from '$lib/auth';
-import type { User } from '$lib/types/AccountingDatabaseTypes';
+import { buildAllocatedWeeks } from '$lib/paymentAlloc';
+import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabaseTypes';
 
 
 type TransformedUser = {
@@ -13,7 +13,7 @@ type TransformedUser = {
     session_token: string;
 }
 
-export const load = async ({ params, platform }) => {
+export const load = async ({ params, platform, locals }) => {
     const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
     const user = await accountingDatabase.prepare(`
         SELECT *
@@ -61,21 +61,28 @@ export const load = async ({ params, platform }) => {
             ON t.email = u.email
 
         CROSS JOIN obligation_total
-
-        GROUP BY u.email
-        WHERE u.email = ?;
+        WHERE u.email = ?
+        GROUP BY u.email;
     `).bind(params.user).first<TransformedUser>();
 
     const allTransactionsFromUser = (await (accountingDatabase.prepare(
         "SELECT * FROM transactions WHERE email = ?"
-    ).bind(params.user)).all<Transaction>()).results;
+    ).bind(params.user)).all<Transaction>()).results.map(t => ({ ...t, date: new Date(parseInt(t.date) * 1000) }));
 
     const allObligations = (await (accountingDatabase.prepare(
         "SELECT * FROM obligations"
-    )).all()).results;
+    )).all<Obligation>()).results.map(o => ({ ...o, start_date: new Date(parseInt(o.start_date) * 1000) }));
 
     if (!user || !netUser) {
         return new Response(null, { status: 404 });
     }
-    return { user, netUser, allTransactionsFromUser, allObligations };
+    const allocatedWeeks = buildAllocatedWeeks(
+    allObligations,
+    allTransactionsFromUser
+);
+
+const nextDue = allocatedWeeks.find(
+    (week) => week.status !== "paid"
+);
+    return { user, netUser, allTransactionsFromUser, allObligations, nextDue, allocatedWeeks, user: locals.user };
 }

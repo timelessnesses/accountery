@@ -2,6 +2,8 @@
 	import { currency } from '$lib/payments.svelte';
 	import { lightbox } from '$lib/LightboxManager.svelte';
 	import type { Transaction } from './types/AccountingDatabaseTypes';
+	import Button from './components/ui/button/button.svelte';
+	import Confirmation from './Confirmation.svelte';
 
     interface Props {
         transactions: Transaction[];
@@ -48,6 +50,12 @@
 								>{currency.format(p.amount)}</span
 							>
 						</div>
+						{#if p.approved === "pending"}
+							<Confirmation confirm={() => {}} cancel={() => {}} show={false} title="Are you sure to approve this payment?" description="This action cannot be undone. (Unless contacting your system developer directly)">
+								<Button variant="ghost" class="text-success">Approve</Button>
+							</Confirmation>
+							<Button variant="ghost" class="text-danger">Reject</Button>
+						{/if}
 						<p class="truncate text-xs text-muted-foreground">{formatDate(p.date.toISOString())}</p>
 						{#if p.description}
 							<p class="truncate text-xs text-muted-foreground/80">{p.description}</p>
