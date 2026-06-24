@@ -1,7 +1,7 @@
 import { GOOGLE_OAUTH_CLIENT_SECRET } from "$env/static/private";
 import { PUBLIC_GOOGLE_OAUTH_CLIENT_ID } from "$env/static/public";
 import { linkedUserAccountWithInfo } from "$lib/whitelisted";
-import { OAuth2Client, type TokenPayload } from "google-auth-library";
+import { OAuth2Client } from "google-auth-library";
 
 export type GoogleJwtRequest = {
     id_token: string;
@@ -12,7 +12,7 @@ const client = new OAuth2Client({
     client_secret: GOOGLE_OAUTH_CLIENT_SECRET
 });
 
-export async function POST({ request, platform, ...a }) {
+export async function POST({ request, platform }) {
     const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
     const { id_token } = await request.json() as GoogleJwtRequest;
 
