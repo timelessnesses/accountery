@@ -15,7 +15,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		} catch (error) {
 			console.error('Error verifying session token:', error);
 			event.locals.user = undefined;
-			delete event.cookies['token'];
+			event.cookies.set('token', '', { path: '/', expires: new Date(0) });
 			/* return redirect(302, "/login"); */
 		}
 	}
