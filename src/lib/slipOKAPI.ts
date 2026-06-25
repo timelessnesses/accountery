@@ -52,7 +52,7 @@ type SlipOkResponse =
  * @param slipImage - A URL to R2's direct path
  */
 export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise<SlipOkResponse> {
-	console.log('Checking slip with SlipOK API:', slipImage, amount);
+	console.log('Checking slip with SlipOK API:', arrayBufferToBase64(slipImage), amount);
 	const apiKey = SLIP_OK_API_KEY;
 	const apiEndpoint = SLIP_OK_API_ENDPOINT;
 	const a = await fetch(apiEndpoint, {
