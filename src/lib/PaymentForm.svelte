@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { currency, type AllocatedWeek } from './payments.svelte';
 	import { lightbox } from './LightboxManager.svelte';
+	import { onMount } from 'svelte';
 
 	// Replace this with your own payment QR image URL.
 	const QR_SRC = '/cropped-qr.jpg';
@@ -17,7 +18,7 @@
 	let justSaved = $state(false);
 
 	// Prefill amount with what's needed to clear the next due / selected week.
-	$effect(() => {
+	onMount(() => {
 		const target = selectedWeek ?? nextDue;
 		if (target && amount === null) {
 			amount = target.remaining;
