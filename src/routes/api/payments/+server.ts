@@ -13,7 +13,6 @@ export const POST = async ({ locals, platform, request }) => {
 		note?: string;
 		proof?: Base64URLString;
 	};
-	console.log(body);
 	const amount = Number(body.amount);
 
 	if (!Number.isFinite(amount) || amount <= 0 || !body.note?.trim() || !body.proof) {
@@ -36,7 +35,7 @@ export const POST = async ({ locals, platform, request }) => {
 			locals.user.email,
 			Math.round(amount),
 			body.note?.trim() || 'Payment',
-			Date.now(),
+			Math.floor(Date.now() / 1000),
 			'payment',
 			'/api/payments/' + res
 		)

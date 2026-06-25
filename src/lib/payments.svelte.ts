@@ -29,7 +29,6 @@ export interface AllocatedWeek extends Obligation {
 }
 
 const CURRENCY = 'THB';
-const STORAGE_KEY = 'weekly-payments-v2';
 
 export const currency = new Intl.NumberFormat('th-TH', {
 	style: 'currency',
@@ -41,7 +40,10 @@ export const currency = new Intl.NumberFormat('th-TH', {
 export function toISODate(d: Date): string {
 	const x = new Date(d);
 	x.setHours(0, 0, 0, 0);
-	return x.toISOString().slice(0, 10);
+	const year = x.getFullYear();
+	const month = String(x.getMonth() + 1).padStart(2, '0');
+	const day = String(x.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
 }
 
 /** Monday-based start of the week containing `d`. */

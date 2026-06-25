@@ -51,7 +51,7 @@ type SlipOkResponse =
  *
  * @param slipImage - A URL to R2's direct path
  */
-async function checkSlip(slipImage: string, amount: number): Promise<SlipOkResponse> {
+export async function checkSlip(slipImage: string, amount: number): Promise<SlipOkResponse> {
 	const apiKey = SLIP_OK_API_KEY;
 	const apiEndpoint = SLIP_OK_API_ENDPOINT;
 	const a = await fetch(apiEndpoint, {

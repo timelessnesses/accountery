@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { PUBLIC_GOOGLE_OAUTH_CLIENT_ID } from '$env/static/public';
 	function handleLoginRequest(response: any) {
-		console.log(response);
 		fetch('/api/auth/google-jwt', {
 			method: 'POST',
 			headers: {
@@ -18,7 +17,6 @@
 				}>()
 			)
 			.then((data) => {
-				console.log('Received session token:', data.token);
 				document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`;
 				window.location.href = '/';
 			})

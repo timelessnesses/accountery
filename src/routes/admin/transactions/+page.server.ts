@@ -1,19 +1,16 @@
 import { unixTimestampToDate } from '$lib/date';
 import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
 
-export const load = async ({ platform, url }) => {
+export const load = async ({ platform }) => {
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
-	const allPendingTransactions = (
+	const transactions = (
 		await accountingDatabase
-			.prepare("SELECT * FROM transactions WHERE approved = 'pending' ORDER BY date DESC")
+			.prepare('SELECT * FROM transactions ORDER BY date DESC')
 			.all<Transaction>()
 	).results.map((transaction) => ({
 		...transaction,
 		date: unixTimestampToDate(transaction.date)
 	})) as Transaction[];
 
-	return {
-		focusedTransactionId: url.searchParams.get('highlightTransactionId'),
-		allPendingTransactions
-	};
+	return { transactions };
 };
