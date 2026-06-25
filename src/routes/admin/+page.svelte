@@ -75,7 +75,7 @@
 
 			const result = (await response.json()) as SlipVerificationResult;
 			const message =
-				result.success && result.data
+				result.data !== undefined && result.data.success
 					? `${result.data.message} · ${currency.format(result.data.amount)}`
 					: 'Slip verification failed';
 
