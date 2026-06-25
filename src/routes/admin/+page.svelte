@@ -174,25 +174,32 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 				</div>
 				<div>
 					<Button
-						onclick={() => (window.location.href = '/admin/users')}
+						href={resolve('/admin/users')}
 						variant="ghost"
 						class="ml-4 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
 					>
 						Go to Users
 					</Button>
 					<Button
-						onclick={() => (window.location.href = '/admin/obligations')}
+						href={resolve('/admin/obligations')}
 						variant="ghost"
 						class="ml-4 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
 					>
 						Go to Obligations
 					</Button>
 					<Button
-						onclick={() => (window.location.href = '/admin/transactions')}
+						href={resolve('/admin/transactions')}
 						variant="ghost"
 						class="ml-4 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
 					>
 						Go to Transactions
+					</Button>
+					<Button
+						href={resolve('/admin/logs')}
+						variant="ghost"
+						class="ml-4 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
+					>
+						Go to Logs
 					</Button>
 				</div>
 			</div>
