@@ -5,11 +5,11 @@ export const load = async ({ platform }) => {
     const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
     const logs = (
         await accountingDatabase
-            .prepare('SELECT * FROM logs ORDER BY date DESC')
+            .prepare('SELECT * FROM logs ORDER BY timestamp DESC, id DESC')
             .all<Log>()
     ).results.map((transaction) => ({
         ...transaction,
-        date: unixTimestampToDate(transaction.date)
+        date: unixTimestampToDate(transaction.timestamp)
     })) as Log[];
 
     return { logs };

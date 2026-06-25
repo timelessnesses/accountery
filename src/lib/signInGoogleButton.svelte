@@ -9,7 +9,8 @@
 			},
 			body: JSON.stringify({
 				id_token: response.credential
-			})
+			}),
+			credentials: 'include'
 		})
 			.then((res) =>
 				res.json<{

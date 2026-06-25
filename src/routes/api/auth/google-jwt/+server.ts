@@ -14,11 +14,6 @@ const client = new OAuth2Client({
 
 export async function POST({ request, cookies, platform }) {
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
-	await accountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
-		'unknown',
-		`User requested Google OAuth login with JWT`,
-		Math.floor(Date.now() / 1000)
-	).run();
 	const { id_token } = (await request.json()) as GoogleJwtRequest;
 
 	const ticket = await client.verifyIdToken({
@@ -41,14 +36,24 @@ export async function POST({ request, cookies, platform }) {
 	if (!Object.keys(linkedUserAccountWithInfo).find((key) => key === studentID)) {
 		return new Response(JSON.stringify({ error: 'Student ID not whitelisted' }), { status: 400 });
 	}
+	/* await accountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
+		payload.email,
+		`User requested Google OAuth login with JWT. Student ID: ${studentID}. Giving new session token.`,
+		Math.floor(Date.now() / 1000)
+	).run(); */
 	const id = await issuingNewSessionToken(payload.email, accountingDatabase);
 	cookies.set('token', id, {
 		path: '/',
-		httpOnly: true,
+		// httpOnly: true,
 		sameSite: 'strict',
-		secure: true,
+		// secure: true,
 		maxAge: 3600
 	})
+	await accountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
+		payload.email,
+		`User ${payload.email} logged in with Google OAuth. Student ID: ${studentID}.`,
+		Math.floor(Date.now() / 1000)
+	).run();
 	return new Response(JSON.stringify({ success: true }), { status: 200 });
 }
 
