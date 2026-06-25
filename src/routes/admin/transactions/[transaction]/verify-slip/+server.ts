@@ -38,7 +38,7 @@ export const POST = async ({ locals, params, platform }) => {
 	const slipObject = (await platform?.env.AccountingReceipts.get(slipKey)) as R2ObjectBody;
 	console.log('Slip object retrieved from R2:', slipObject);
 
-	const result = await checkSlipOkCacheBeforeCallingSlipOkApi(platform?.env.AccountingDatabase, transaction.id, slipObject, transaction.amount);
+	const result = await checkSlipOkCacheBeforeCallingSlipOkApi(platform?.env.AccountingDatabase, transaction.id, slipObject, transaction.amount, locals.user.email);
 
 	return json(result);
 };
@@ -52,13 +52,24 @@ async function checkSlipOkCacheBeforeCallingSlipOkApi(
 	db: D1Database,
 	transactionId: number,
 	slipObject: R2ObjectBody,
-	amount: number
+	amount: number,
+	adminEmail: string
 ): Promise<SlipOkResponse> {
 	const res = await db.prepare('SELECT * FROM slipok_cache WHERE transaction_id = ?').bind(transactionId).first<SlipOkCacheEntry>();
 	if (!res) {
 		const response = await checkSlip(await slipObject.arrayBuffer(), amount)
 		await db.prepare('INSERT INTO slipok_cache (transaction_id, slipok_response) VALUES (?, ?)').bind(transactionId, JSON.stringify(response)).run();
+		await db.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
+			adminEmail,
+			`Admin ${adminEmail} checked slip for transaction ${transactionId} from SlipOK API`,
+			Math.floor(Date.now() / 1000)
+		).run();
 		return response;
 	}
+	await db.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
+		adminEmail,
+		`Admin ${adminEmail} checked slip for transaction ${transactionId} from cache`,
+		Math.floor(Date.now() / 1000)
+	).run();
 	return JSON.parse(res.slipok_response) as SlipOkResponse;
 }

@@ -23,3 +23,11 @@ export type Obligation = {
 	amount: number;
 	description: string;
 };
+
+export type Log = {
+	id: number;
+	email: string;
+	action: string;
+	timestamp: number;
+	date: Date;
+};

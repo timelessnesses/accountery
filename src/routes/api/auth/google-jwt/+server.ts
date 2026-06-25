@@ -14,6 +14,11 @@ const client = new OAuth2Client({
 
 export async function POST({ request, cookies, platform }) {
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
+	await accountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
+		'unknown',
+		`User requested Google OAuth login with JWT`,
+		Math.floor(Date.now() / 1000)
+	).run();
 	const { id_token } = (await request.json()) as GoogleJwtRequest;
 
 	const ticket = await client.verifyIdToken({
