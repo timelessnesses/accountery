@@ -12,7 +12,7 @@ const client = new OAuth2Client({
 	client_secret: GOOGLE_OAUTH_CLIENT_SECRET
 });
 
-export async function POST({ request, platform }) {
+export async function POST({ request, cookies, platform }) {
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
 	const { id_token } = (await request.json()) as GoogleJwtRequest;
 
@@ -37,7 +37,14 @@ export async function POST({ request, platform }) {
 		return new Response(JSON.stringify({ error: 'Student ID not whitelisted' }), { status: 400 });
 	}
 	const id = await issuingNewSessionToken(payload.email, accountingDatabase);
-	return new Response(JSON.stringify({ token: id }), { status: 200 });
+	cookies.set('token', id, {
+		path: '/',
+		httpOnly: true,
+		sameSite: 'strict',
+		secure: true,
+		maxAge: 3600
+	})
+	return new Response(JSON.stringify({ success: true }), { status: 200 });
 }
 
 async function issuingNewSessionToken(studentEmail: string, database: D1Database) {
@@ -67,11 +74,5 @@ async function issuingNewSessionToken(studentEmail: string, database: D1Database
 }
 
 function randomString(length: number) {
-	let result = '';
-	const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	const charactersLength = characters.length;
-	for (let i = 0; i < length; i++) {
-		result += characters.charAt(Math.floor(Math.random() * charactersLength));
-	}
-	return result;
+	return crypto.randomUUID()
 }
