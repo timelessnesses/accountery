@@ -1,9 +1,9 @@
-@import "tw-animate-css";
-@import "shadcn-svelte/tailwind.css";
-@import "@fontsource-variable/jetbrains-mono";
+@import 'tw-animate-css';
+@import 'shadcn-svelte/tailwind.css';
+@import '@fontsource-variable/jetbrains-mono';
 
 @layer base {
 	html {
-		font-family: "JetBrains Mono Variable", monospace;
+		font-family: 'JetBrains Mono Variable', monospace;
 	}
 }

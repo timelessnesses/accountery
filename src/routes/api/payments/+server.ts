@@ -8,7 +8,11 @@ export const POST = async ({ locals, platform, request }) => {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	const body = (await request.json()) as { amount?: number; note?: string; proof?: Base64URLString };
+	const body = (await request.json()) as {
+		amount?: number;
+		note?: string;
+		proof?: Base64URLString;
+	};
 	console.log(body);
 	const amount = Number(body.amount);
 
@@ -17,7 +21,12 @@ export const POST = async ({ locals, platform, request }) => {
 	}
 
 	const imageBytes = dataUrlToBytes(body.proof);
-	const res = (await platform?.env.AccountingReceipts.put(`${new Date().toISOString()}-${locals.user.email}.png`, imageBytes))?.key;
+	const res = (
+		await platform?.env.AccountingReceipts.put(
+			`${new Date().toISOString()}-${locals.user.email}.png`,
+			imageBytes
+		)
+	)?.key;
 
 	await accountingDatabase
 		.prepare(
@@ -29,7 +38,7 @@ export const POST = async ({ locals, platform, request }) => {
 			body.note?.trim() || 'Payment',
 			Date.now(),
 			'payment',
-			"/api/payments/" + res
+			'/api/payments/' + res
 		)
 		.run();
 
@@ -37,13 +46,10 @@ export const POST = async ({ locals, platform, request }) => {
 };
 
 function dataUrlToBytes(dataUrl: string): Uint8Array {
-    const bytes = Buffer.from(
-		dataUrl.split(",")[1],
-		"base64"
-	);
+	const bytes = Buffer.from(dataUrl.split(',')[1], 'base64');
 	return new Uint8Array(bytes);
 }
 
-function buildPublicCDNUrl(key: string) { 
+function buildPublicCDNUrl(key: string) {
 	return `https://receipts.timelessnesses.me/${key}`;
 }

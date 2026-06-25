@@ -6,7 +6,8 @@
 	// Replace this with your own payment QR image URL.
 	const QR_SRC = '/cropped-qr.jpg';
 
-	let { selectedWeek, nextDue }: { selectedWeek?: AllocatedWeek; nextDue?: AllocatedWeek } = $props();
+	let { selectedWeek, nextDue }: { selectedWeek?: AllocatedWeek; nextDue?: AllocatedWeek } =
+		$props();
 
 	let amount = $state<number | null>(null);
 	let note = $state('');

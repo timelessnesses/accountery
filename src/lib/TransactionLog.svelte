@@ -5,16 +5,14 @@
 	import Button from './components/ui/button/button.svelte';
 	import Confirmation from './Confirmation.svelte';
 
-    interface Props {
-        transactions: Transaction[];
-    }
+	interface Props {
+		transactions: Transaction[];
+	}
 
-    const { transactions }: Props = $props();
+	const { transactions }: Props = $props();
 
 	// Newest first.
-	const entries = $derived(
-		[...transactions].sort((a, b) => b.date > a.date ? 1 : -1)
-	);
+	const entries = $derived([...transactions].sort((a, b) => (b.date > a.date ? 1 : -1)));
 
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString('en-US', {
@@ -42,16 +40,36 @@
 						class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/10 text-success"
 						aria-hidden="true"
 					>
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg
+						>
 					</span>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-baseline justify-between gap-2">
-							<span class={"text-sm font-semibold tabular-nums text-card-foreground " + (p.approved === 'approved' ? 'text-success' : p.approved === 'pending' ? 'text-warning' : 'text-danger')}
-								>{currency.format(p.amount)}</span
+							<span
+								class={'text-sm font-semibold tabular-nums text-card-foreground ' +
+									(p.approved === 'approved'
+										? 'text-success'
+										: p.approved === 'pending'
+											? 'text-warning'
+											: 'text-danger')}>{currency.format(p.amount)}</span
 							>
 						</div>
-						{#if p.approved === "pending"}
-							<Confirmation confirm={() => {}} cancel={() => {}} show={false} title="Are you sure to approve this payment?" description="This action cannot be undone. (Unless contacting your system developer directly)">
+						{#if p.approved === 'pending'}
+							<Confirmation
+								confirm={() => {}}
+								cancel={() => {}}
+								show={false}
+								title="Are you sure to approve this payment?"
+								description="This action cannot be undone. (Unless contacting your system developer directly)"
+							>
 								<Button variant="ghost" class="text-success">Approve</Button>
 							</Confirmation>
 							<Button variant="ghost" class="text-danger">Reject</Button>
@@ -63,16 +81,14 @@
 						{#if p.image}
 							<button
 								type="button"
-								onclick={() => lightbox.open(p.image!, `Bank slip for ${currency.format(p.amount)}`)}
+								onclick={() =>
+									lightbox.open(p.image!, `Bank slip for ${currency.format(p.amount)}`)}
 								class="group/slip mt-1.5 flex items-center gap-2 rounded-md border border-border bg-background p-1 pr-2 transition hover:border-primary"
 								aria-label="View bank slip for {currency.format(p.amount)}"
 							>
-								<img
-									src={p.image}
-									alt="Bank slip thumbnail"
-									class="h-8 w-8 rounded object-cover"
-								/>
-								<span class="text-xs font-medium text-muted-foreground group-hover/slip:text-primary"
+								<img src={p.image} alt="Bank slip thumbnail" class="h-8 w-8 rounded object-cover" />
+								<span
+									class="text-xs font-medium text-muted-foreground group-hover/slip:text-primary"
 									>View slip</span
 								>
 							</button>

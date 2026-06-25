@@ -35,10 +35,10 @@
 				w.status === 'paid'
 					? `Paid · ${currency.format(w.cost)}`
 					: w.status === 'partial'
-					? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
-					: w.status === 'waiting_approval'
-					? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
-					: `Unpaid · ${currency.format(w.cost)}`,
+						? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
+						: w.status === 'waiting_approval'
+							? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
+							: `Unpaid · ${currency.format(w.cost)}`,
 			backgroundColor: STATUS_COLOR[w.status],
 			borderColor: STATUS_COLOR[w.status],
 			textColor: '#fff',

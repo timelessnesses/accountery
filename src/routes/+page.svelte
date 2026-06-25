@@ -24,8 +24,16 @@
 		waiting_approval: { label: 'Waiting approval', dot: 'bg-info', text: 'text-info' }
 	} as const;
 
-	const totalPaid = $derived([...data.transaction].filter((tx) => tx.approved === 'approved').reduce((sum, tx) => sum + tx.amount, 0));
-	const totalPending = $derived([...data.transaction].filter((tx) => tx.approved === 'pending').reduce((sum, tx) => sum + tx.amount, 0));
+	const totalPaid = $derived(
+		[...data.transaction]
+			.filter((tx) => tx.approved === 'approved')
+			.reduce((sum, tx) => sum + tx.amount, 0)
+	);
+	const totalPending = $derived(
+		[...data.transaction]
+			.filter((tx) => tx.approved === 'pending')
+			.reduce((sum, tx) => sum + tx.amount, 0)
+	);
 	const totalOwed = $derived(data.obligations.reduce((sum, ob) => sum + ob.amount, 0));
 	const adminDisabled = $derived(
 		Object.keys(administrators).includes(data.user?.email.split('@')[0] ?? '') === false
@@ -37,8 +45,23 @@
 	<header class="border-b border-border bg-card">
 		<div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
 			<div class="flex items-center gap-3">
-				<div class="flex h-15 w-15 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-					<svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4m8-4v4"/></svg>
+				<div
+					class="flex h-15 w-15 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+				>
+					<svg
+						width="100"
+						height="100"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+						><rect x="3" y="4" width="18" height="18" rx="2" /><path
+							d="M3 10h18M8 2v4m8-4v4"
+						/></svg
+					>
 				</div>
 				<div>
 					<h1 class="text-sm font-semibold leading-tight text-card-foreground">Weekly Payments</h1>
@@ -67,11 +90,9 @@
 					<p class="text-xs text-muted-foreground">&nbsp;</p>
 				</div>
 				<button
-					onclick={() => window.location.href = '/admin'}
+					onclick={() => (window.location.href = '/admin')}
 					class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
-					style={
-						adminDisabled ? "visibility: hidden; pointer-events: none; opacity: 0.5;" : ""
-					}
+					style={adminDisabled ? 'visibility: hidden; pointer-events: none; opacity: 0.5;' : ''}
 					disabled={adminDisabled}
 				>
 					Adminstrator Access
@@ -135,7 +156,10 @@
 						<span class="h-2 w-2 rounded-full {meta.dot}"></span>
 						<span class="text-xs font-medium {meta.text}">{meta.label}</span>
 						<span class="ml-auto text-xs text-muted-foreground">
-							{currency.format(selectedWeek.allocated) + (selectedWeek.status === 'waiting_approval' ? ' + ' + currency.format(selectedWeek.pendingAllocated) : '')} / {currency.format(selectedWeek.cost)}
+							{currency.format(selectedWeek.allocated) +
+								(selectedWeek.status === 'waiting_approval'
+									? ' + ' + currency.format(selectedWeek.pendingAllocated)
+									: '')} / {currency.format(selectedWeek.cost)}
 						</span>
 					</div>
 				</div>
@@ -145,10 +169,7 @@
 	</main>
 
 	<!-- Mobile bottom toolbar -->
-	<nav
-		class="flex shrink-0 border-t border-border bg-card lg:hidden"
-		aria-label="Panel switcher"
-	>
+	<nav class="flex shrink-0 border-t border-border bg-card lg:hidden" aria-label="Panel switcher">
 		<button
 			onclick={() => (mobilePanel = 'calendar')}
 			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium {mobilePanel ===
@@ -156,7 +177,18 @@
 				? 'text-primary'
 				: 'text-muted-foreground'}"
 		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4m8-4v4"/></svg>
+			<svg
+				width="20"
+				height="20"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+				><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M3 10h18M8 2v4m8-4v4" /></svg
+			>
 			Calendar
 		</button>
 		<button
@@ -166,7 +198,18 @@
 				? 'text-primary'
 				: 'text-muted-foreground'}"
 		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+			<svg
+				width="20"
+				height="20"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+				><path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" /></svg
+			>
 			History
 		</button>
 		<button
@@ -176,7 +219,18 @@
 				? 'text-primary'
 				: 'text-muted-foreground'}"
 		>
-			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+			<svg
+				width="20"
+				height="20"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+				><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></svg
+			>
 			Pay
 		</button>
 	</nav>
