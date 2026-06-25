@@ -72,12 +72,12 @@ export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise
 }
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
+	let binary = '';
+	const bytes = new Uint8Array(buffer);
 
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
+	for (let i = 0; i < bytes.length; i++) {
+		binary += String.fromCharCode(bytes[i]);
+	}
 
-  return btoa(binary);
+	return btoa(binary);
 }

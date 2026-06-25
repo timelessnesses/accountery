@@ -5,10 +5,10 @@
 	import { linkedUserAccountWithInfo } from '$lib/whitelisted.js';
 
 	const { data } = $props();
-    if (!data) {
-        alert('No data found. Please check the server logs for more information.');
-        window.location.href = '/admin/users';
-    }
+	if (!data) {
+		alert('No data found. Please check the server logs for more information.');
+		window.location.href = '/admin/users';
+	}
 
 	let selectedWeek = $state<AllocatedWeek | undefined>();
 

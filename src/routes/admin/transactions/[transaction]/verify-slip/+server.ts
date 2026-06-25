@@ -35,7 +35,7 @@ export const POST = async ({ locals, params, platform }) => {
 
 	console.log('Verifying slip for transaction:', transaction);
 	const slipKey = path.basename(transaction.image);
-	const slipObject = await platform?.env.AccountingReceipts.get(slipKey) as R2ObjectBody;
+	const slipObject = (await platform?.env.AccountingReceipts.get(slipKey)) as R2ObjectBody;
 	console.log('Slip object retrieved from R2:', slipObject);
 
 	const result = await checkSlip(await slipObject?.arrayBuffer(), transaction.amount);
