@@ -15,6 +15,12 @@ export const POST = async ({ locals, platform, request }) => {
 	};
 	const amount = Number(body.amount);
 
+	env.AccountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
+		locals.user.email,
+		`User ${locals.user.email} submitted a payment of amount ${amount} with note: ${body.note}`,
+		Math.floor(Date.now() / 1000)
+	).run();
+
 	if (!Number.isFinite(amount) || amount <= 0 || !body.note?.trim() || !body.proof) {
 		return json({ error: 'Invalid amount' }, { status: 400 });
 	}
@@ -40,15 +46,19 @@ export const POST = async ({ locals, platform, request }) => {
 			'/api/payments/' + res
 		)
 		.run();
-
+	await accountingDatabase.prepare(
+		'INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)'
+	)
+	.bind(
+		locals.user.email,
+		`Successful of action User ${locals.user.email} submitted a payment of amount ${amount} with note: ${body.note}`,
+		Math.floor(Date.now() / 1000)
+	)
+	.run();
 	return json({ ok: true });
 };
 
 function dataUrlToBytes(dataUrl: string): Uint8Array {
 	const bytes = Buffer.from(dataUrl.split(',')[1], 'base64');
 	return new Uint8Array(bytes);
-}
-
-function buildPublicCDNUrl(key: string) {
-	return `https://receipts.timelessnesses.me/${key}`;
 }
