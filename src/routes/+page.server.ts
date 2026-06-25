@@ -1,4 +1,5 @@
 import { buildAllocatedWeeks } from '$lib/paymentAlloc.js';
+import { unixTimestampToDate } from '$lib/date.js';
 import type { Obligation, Transaction } from '$lib/types/AccountingDatabaseTypes';
 import { redirect } from '@sveltejs/kit';
 
@@ -14,7 +15,7 @@ export const load = async ({ locals, platform }) => {
 			.all<Transaction>()
 	).results.map((transaction) => ({
 		...transaction,
-		date: new Date(transaction.date)
+		date: unixTimestampToDate(transaction.date)
 	})) as Transaction[];
 	const allObligations = (
 		await accountingDatabase.prepare('SELECT * FROM obligations').all<Obligation>()
@@ -22,7 +23,6 @@ export const load = async ({ locals, platform }) => {
 		...obligation,
 		start_date: new Date((obligation.start_date as unknown as number) * 1000)
 	})) as Obligation[];
-	console.log(allObligations);
 	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
 	const nextDue = allocatedWeeks.find((week) => week.status !== 'paid');
 

@@ -1,5 +1,4 @@
 export const load = async ({ platform }) => {
-	console.log('hit');
 	const transactionsFromUser = (await platform?.env.AccountingDatabase.prepare(
 		`
         WITH obligation_total AS (
@@ -46,7 +45,6 @@ export const load = async ({ platform }) => {
         GROUP BY u.email;
     `
 	).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
-	console.log('done');
 
 	return { transactionsFromUser };
 };

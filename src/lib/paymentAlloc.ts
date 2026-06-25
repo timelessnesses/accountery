@@ -1,9 +1,5 @@
-import type { AllocatedWeek } from './payments.svelte';
+import { toISODate, type AllocatedWeek } from './payments.svelte';
 import type { Obligation, Transaction } from './types/AccountingDatabaseTypes';
-
-function toISODate(value: Date | string): string {
-	return new Date(value).toISOString().slice(0, 10);
-}
 
 export function buildAllocatedWeeks(
 	obligations: Obligation[],
@@ -57,7 +53,7 @@ export function buildAllocatedWeeks(
 
 		return {
 			id: obligation.id.toString(),
-			weekStart: toISODate(obligation.start_date),
+			weekStart: toISODate(new Date(obligation.start_date)),
 			label: obligation.description,
 
 			cost,

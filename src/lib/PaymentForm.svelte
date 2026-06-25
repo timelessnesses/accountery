@@ -10,7 +10,7 @@
 		$props();
 
 	let amount = $state<number | null>(null);
-	let note = $state('');
+	let note = $state('Paying Obligation');
 	let proof = $state<string | undefined>(undefined);
 	let proofName = $state('');
 	let submitting = $state(false);
@@ -57,7 +57,7 @@
 			}
 
 			amount = null;
-			note = '';
+			note = 'Paying Obligation';
 			clearProof();
 			justSaved = true;
 			setTimeout(() => (justSaved = false), 2500);
@@ -130,7 +130,7 @@
 				<input
 					type="text"
 					bind:value={note}
-					placeholder="e.g. reference number"
+					placeholder="Paying Obligation"
 					required
 					class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
 				/>

@@ -3,7 +3,7 @@
 	import { Calendar } from '@fullcalendar/core';
 	import dayGridPlugin from '@fullcalendar/daygrid';
 	import interactionPlugin from '@fullcalendar/interaction';
-	import { currency, formatWeekRange, type AllocatedWeek } from './payments.svelte';
+	import { addDays, currency, toISODate, type AllocatedWeek } from './payments.svelte';
 
 	let { weeks, onselect }: { weeks: AllocatedWeek[]; onselect?: (w: AllocatedWeek) => void } =
 		$props();
@@ -29,7 +29,7 @@
 		return list.map((w) => ({
 			id: w.id,
 			start: w.weekStart,
-			end: addDaysLocal(w.weekStart, 8),
+			end: addDays(w.weekStart, 7),
 			allDay: true,
 			title:
 				w.status === 'paid'
@@ -46,18 +46,12 @@
 		}));
 	}
 
-	function addDaysLocal(iso: string, days: number) {
-		const d = new Date(iso + 'T00:00:00');
-		d.setDate(d.getDate() + days);
-		return d.toISOString().slice(0, 10);
-	}
-
 	// Map each calendar day -> status class for coloring the whole week strip.
 	function dayClasses(list: AllocatedWeek[]) {
 		const map = new Map<string, string>();
 		for (const w of list) {
 			for (let i = 0; i < 7; i++) {
-				map.set(addDaysLocal(w.weekStart, i), STATUS_CLASS[w.status]);
+				map.set(addDays(w.weekStart, i), STATUS_CLASS[w.status]);
 			}
 		}
 		return map;
@@ -68,6 +62,7 @@
 			plugins: [dayGridPlugin, interactionPlugin],
 			initialView: 'dayGridMonth',
 			height: '100%',
+			expandRows: true,
 			firstDay: 0,
 			headerToolbar: {
 				left: 'prev,next today',
@@ -76,7 +71,7 @@
 			},
 			events: buildEvents(weeks),
 			dayCellClassNames: (arg) => {
-				const iso = arg.date.toISOString().slice(0, 10);
+				const iso = toISODate(arg.date);
 				const cls = dayClasses(weeks).get(iso);
 				return cls ? [cls] : [];
 			},
@@ -86,6 +81,7 @@
 			}
 		});
 		calendar.render();
+		requestAnimationFrame(() => calendar?.updateSize());
 	});
 
 	// Re-render when weeks change.
@@ -96,7 +92,7 @@
 		calendar.removeAllEvents();
 		calendar.addEventSource(buildEvents(list));
 		calendar.setOption('dayCellClassNames', (arg) => {
-			const iso = arg.date.toISOString().slice(0, 10);
+			const iso = toISODate(arg.date);
 			const cls = dayClasses(list).get(iso);
 			return cls ? [cls] : [];
 		});

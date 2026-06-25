@@ -13,6 +13,7 @@
 
 		actions?: Snippet<[T]>;
 		bulkActions?: Snippet<[T[]]>;
+		detail?: Snippet<[T]>;
 	};
 
 	let {
@@ -23,11 +24,13 @@
 		header,
 		row,
 		actions,
-		bulkActions
+		bulkActions,
+		detail
 	}: Props = $props();
 
 	let search = $state('');
-	let selected = new SvelteSet<T>();
+	let selected = $state(new SvelteSet<T>());
+	let expanded = $state<T | undefined>();
 
 	const filteredData = $derived.by(() => {
 		if (!search.trim() || searchKeys.length === 0) return data;
@@ -52,6 +55,13 @@
 
 		selected = new SvelteSet(selected);
 	}
+
+	function toggleExpanded(item: T) {
+		if (!detail) return;
+
+		expanded = expanded === item ? undefined : item;
+	}
+
 	const selectedItems = $derived(
 		Array.from(selected)
 			.map((index) => filteredData.find((item) => item === index))
@@ -85,9 +95,14 @@
 
 				<Table.Body>
 					{#each filteredData as item, index (index)}
-						<Table.Row class={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+						<Table.Row
+							class={(index % 2 === 0 ? 'bg-background' : 'bg-muted/20') +
+								(detail ? ' cursor-pointer' : '')}
+							aria-expanded={detail ? expanded === item : undefined}
+							onclick={() => toggleExpanded(item)}
+						>
 							{#if selectable}
-								<Table.Cell>
+								<Table.Cell onclick={(event) => event.stopPropagation()}>
 									<input
 										type="checkbox"
 										checked={selected.has(item)}
@@ -99,11 +114,18 @@
 							{@render row(item)}
 
 							{#if actions}
-								<Table.Cell class="text-right">
+								<Table.Cell class="text-right" onclick={(event) => event.stopPropagation()}>
 									{@render actions(item)}
 								</Table.Cell>
 							{/if}
 						</Table.Row>
+						{#if detail && expanded === item}
+							<Table.Row class="bg-muted/20">
+								<Table.Cell colspan={999} class="p-4">
+									{@render detail(item)}
+								</Table.Cell>
+							</Table.Row>
+						{/if}
 					{/each}
 				</Table.Body>
 			</Table.Root>

@@ -2,8 +2,6 @@
 	import { currency } from '$lib/payments.svelte';
 	import { lightbox } from '$lib/LightboxManager.svelte';
 	import type { Transaction } from './types/AccountingDatabaseTypes';
-	import Button from './components/ui/button/button.svelte';
-	import Confirmation from './Confirmation.svelte';
 
 	interface Props {
 		transactions: Transaction[];
@@ -22,6 +20,12 @@
 			minute: '2-digit'
 		});
 	}
+
+	const statusClass = {
+		approved: 'bg-success/10 text-success',
+		pending: 'bg-warning/10 text-warning',
+		rejected: 'bg-danger/10 text-danger'
+	} as const;
 </script>
 
 <div class="flex h-full min-h-0 flex-col rounded-xl border border-border bg-card">
@@ -37,19 +41,45 @@
 			{#each entries as p (p.id)}
 				<li class="group flex items-start gap-2 px-3 py-2.5">
 					<span
-						class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success/10 text-success"
+						class={'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ' +
+							statusClass[p.approved]}
 						aria-hidden="true"
 					>
-						<svg
-							width="14"
-							height="14"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="2.5"
-							stroke-linecap="round"
-							stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg
-						>
+						{#if p.approved === 'rejected'}
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg
+							>
+						{:else if p.approved === 'pending'}
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								><path d="M12 6v6l4 2" /><circle cx="12" cy="12" r="9" /></svg
+							>
+						{:else}
+							<svg
+								width="14"
+								height="14"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"><path d="M20 6 9 17l-5-5" /></svg
+							>
+						{/if}
 					</span>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-baseline justify-between gap-2">
@@ -61,19 +91,13 @@
 											? 'text-warning'
 											: 'text-danger')}>{currency.format(p.amount)}</span
 							>
-						</div>
-						{#if p.approved === 'pending'}
-							<Confirmation
-								confirm={() => {}}
-								cancel={() => {}}
-								show={false}
-								title="Are you sure to approve this payment?"
-								description="This action cannot be undone. (Unless contacting your system developer directly)"
+							<span
+								class={'rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ' +
+									statusClass[p.approved]}
 							>
-								<Button variant="ghost" class="text-success">Approve</Button>
-							</Confirmation>
-							<Button variant="ghost" class="text-danger">Reject</Button>
-						{/if}
+								{p.approved}
+							</span>
+						</div>
 						<p class="truncate text-xs text-muted-foreground">{formatDate(p.date.toISOString())}</p>
 						{#if p.description}
 							<p class="truncate text-xs text-muted-foreground/80">{p.description}</p>

@@ -1,5 +1,7 @@
+import { unixTimestampToDate } from '$lib/date';
 import { buildAllocatedWeeks } from '$lib/paymentAlloc';
 import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabaseTypes';
+import { error } from '@sveltejs/kit';
 
 type TransformedUser = {
 	email: string;
@@ -14,7 +16,7 @@ type TransformedUser = {
 
 export const load = async ({ params, platform, locals }) => {
 	if (!locals.user) {
-		return new Response(null, { status: 401 });
+		throw error(401, 'Unauthorized');
 	}
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
 	const user = await accountingDatabase
@@ -82,14 +84,18 @@ export const load = async ({ params, platform, locals }) => {
 			.prepare('SELECT * FROM transactions WHERE email = ?')
 			.bind(params.user)
 			.all<Transaction>()
-	).results.map((t) => ({ ...t, date: new Date(parseInt(t.date) * 1000) }));
+	).results.map((t) => ({ ...t, date: unixTimestampToDate(t.date) }));
 
 	const allObligations = (
 		await accountingDatabase.prepare('SELECT * FROM obligations').all<Obligation>()
-	).results.map((o) => ({ ...o, start_date: new Date(parseInt(o.start_date) * 1000) }));
+	).results // o.start_date is a number
+		.map((o) => ({
+			...o,
+			start_date: new Date(parseInt(o.start_date as unknown as string) * 1000)
+		}));
 
 	if (!user || !netUser) {
-		return new Response(null, { status: 404 });
+		throw error(404, 'User not found');
 	}
 	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
 
@@ -100,7 +106,6 @@ export const load = async ({ params, platform, locals }) => {
 		allTransactionsFromUser,
 		allObligations,
 		nextDue,
-		allocatedWeeks,
-		user: locals.user
+		allocatedWeeks
 	};
 };
