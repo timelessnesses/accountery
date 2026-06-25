@@ -28,7 +28,7 @@ export async function verifySessionToken(
 	env: Env
 ): Promise<{ email: string; name: string; nickname: string }> {
 	const db = env.AccountingDatabase;
-	const stmt = db.prepare('SELECT * FROM users WHERE session_token = ? AND session_expiry < ?');
+	const stmt = db.prepare('SELECT * FROM users WHERE session_token = ? AND session_expiry > ?');
 	const result = await stmt.bind(token, Date.now() / 1000).first<User>();
 	if (!result) {
 		throw new Error('Invalid session token');
