@@ -1,20 +1,13 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { PUBLIC_RECEPIENT_EXPECTED_PROXY, PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING, PUBLIC_RECEPIENT_NAME_ENG, PUBLIC_RECEPIENT_NAME_THAI } from '$env/static/public';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Table from '$lib/components/ui/table';
 	import { currency } from '$lib/payments.svelte';
+	import type { SlipOkResponse } from '$lib/slipOKAPI.js';
 	import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
 
-	type SlipVerificationResult =
-		| { success: false }
-		| {
-				success: true;
-				data: {
-					message: string;
-					amount: number;
-				};
-		  };
 
 	const { data } = $props();
 
@@ -73,11 +66,21 @@
 				throw new Error(await response.text());
 			}
 
-			const result = (await response.json()) as SlipVerificationResult;
-			const message =
-				result.data !== undefined && result.data.success
-					? `${result.data.message} · ${currency.format(result.data.amount)}`
-					: 'Slip verification failed';
+			const result = (await response.json()) as SlipOkResponse;
+			let message;
+			if (result.data && result.data.success) {
+				const { expectedRecipientThaiName, expectedRecipientEnglishName, expectedRecipientProxy, expectedRecipientProxyValueEnding, allChecksPassed } =
+					checkingSlipCondition(result);
+				message = `
+${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
+- Expected Recipient Thai Name: ${expectedRecipientThaiName ? '✅' : '❌'} (EXPECTED: ${PUBLIC_RECEPIENT_NAME_THAI}, RECEIVED: ${result.data.receiver.displayName})
+- Expected Recipient English Name: ${expectedRecipientEnglishName ? '✅' : '❌'} (EXPECTED: ${PUBLIC_RECEPIENT_NAME_ENG}, RECEIVED: ${result.data.receiver.name})
+- Expected Recipient Proxy: ${expectedRecipientProxy ? '✅' : '❌'} (EXPECTED: ${PUBLIC_RECEPIENT_EXPECTED_PROXY}, RECEIVED: ${result.data.receiver.proxy.type})
+- Expected Recipient Proxy Value Ending: ${expectedRecipientProxyValueEnding ? '✅' : '❌'} (EXPECTED: ${PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING}, RECEIVED: ${result.data.receiver.proxy.value})
+				`.trim()
+			} else {
+				message = 'Unable to verify this slip';
+			}
 
 			slipVerificationMessages = {
 				...slipVerificationMessages,
@@ -103,6 +106,40 @@
 
 		event.preventDefault();
 		toggleTransaction(transaction);
+	}
+	function checkingSlipCondition(slipOkResponse: SlipOkResponse): {
+		expectedRecipientThaiName: boolean;
+		expectedRecipientEnglishName: boolean;
+		expectedRecipientProxy: boolean;
+		expectedRecipientProxyValueEnding: boolean;
+		allChecksPassed: boolean;
+	} {
+		if (!slipOkResponse.data || !slipOkResponse.data.success) {
+			return {
+				expectedRecipientThaiName: false,
+				expectedRecipientEnglishName: false,
+				expectedRecipientProxy: false,
+				expectedRecipientProxyValueEnding: false,
+				allChecksPassed: false
+			};
+		}
+		const expectedRecipientThaiName = slipOkResponse.data.receiver.displayName === PUBLIC_RECEPIENT_NAME_THAI;
+		const expectedRecipientEnglishName = slipOkResponse.data.receiver.name === PUBLIC_RECEPIENT_NAME_ENG;
+		const expectedRecipientProxy = slipOkResponse.data.receiver.proxy.type === PUBLIC_RECEPIENT_EXPECTED_PROXY;
+		const expectedRecipientProxyValueEnding = slipOkResponse.data.receiver.proxy.value.endsWith(
+			PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING
+		);
+		return {
+			expectedRecipientThaiName,
+			expectedRecipientEnglishName,
+			expectedRecipientProxy,
+			expectedRecipientProxyValueEnding,
+			allChecksPassed:
+				expectedRecipientThaiName &&
+				expectedRecipientEnglishName &&
+				expectedRecipientProxy &&
+				expectedRecipientProxyValueEnding
+		};
 	}
 </script>
 
@@ -261,7 +298,7 @@
 										{#if transaction.image}
 											<div class="flex flex-col gap-3 sm:flex-row sm:items-start">
 												<a
-													href={transaction.image}
+													href={resolve(transaction.image as `/api/payments/${string}`)}
 													target="_blank"
 													rel="noreferrer"
 													class="block w-full max-w-sm rounded-md border border-border bg-background p-2 transition hover:border-primary"
@@ -291,7 +328,7 @@
 														</p>
 													</div>
 													{#if slipVerificationMessages[transaction.id]}
-														<p class="text-xs font-medium text-info">
+														<p class="text-xs font-medium text-info whitespace-pre-wrap">
 															{slipVerificationMessages[transaction.id]}
 														</p>
 													{/if}
