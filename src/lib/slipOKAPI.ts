@@ -51,21 +51,33 @@ type SlipOkResponse =
  *
  * @param slipImage - A URL to R2's direct path
  */
-export async function checkSlip(slipImage: string, amount: number): Promise<SlipOkResponse> {
+export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise<SlipOkResponse> {
+	console.log('Checking slip with SlipOK API:', slipImage, amount);
 	const apiKey = SLIP_OK_API_KEY;
 	const apiEndpoint = SLIP_OK_API_ENDPOINT;
 	const a = await fetch(apiEndpoint, {
 		method: 'POST',
 		headers: {
-			'X-Authorization': `Bearer ${apiKey}`,
+			'X-Authorization': `${apiKey}`,
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({
-			url: slipImage,
+			files: arrayBufferToBase64(slipImage),
 			log: true,
 			amount
 		})
 	});
 	const response = await a.json<SlipOkResponse>();
 	return response;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+
+  return btoa(binary);
 }
