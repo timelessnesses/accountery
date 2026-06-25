@@ -1,8 +1,8 @@
-import type { AllocatedWeek } from "./payments.svelte";
-import type { Obligation, Transaction } from "./types/AccountingDatabaseTypes";
+import type { AllocatedWeek } from './payments.svelte';
+import type { Obligation, Transaction } from './types/AccountingDatabaseTypes';
 
 function toISODate(value: Date | string): string {
-    return new Date(value).toISOString().slice(0, 10);
+	return new Date(value).toISOString().slice(0, 10);
 }
 
 export function buildAllocatedWeeks(
@@ -10,17 +10,15 @@ export function buildAllocatedWeeks(
 	transactions: Transaction[]
 ): AllocatedWeek[] {
 	const sortedObligations = [...obligations].sort(
-		(a, b) =>
-			new Date(a.start_date).getTime() -
-			new Date(b.start_date).getTime()
+		(a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
 	);
 
 	let approvedFunds = transactions
-		.filter((tx) => tx.approved === "approved")
+		.filter((tx) => tx.approved === 'approved')
 		.reduce((sum, tx) => sum + tx.amount, 0);
 
 	let pendingFunds = transactions
-		.filter((tx) => tx.approved === "pending")
+		.filter((tx) => tx.approved === 'pending')
 		.reduce((sum, tx) => sum + tx.amount, 0);
 
 	return sortedObligations.map((obligation) => {
@@ -39,26 +37,23 @@ export function buildAllocatedWeeks(
 
 		// consume pending funds second
 		if (remaining > 0 && pendingFunds > 0) {
-			pendingAllocated = Math.min(
-				pendingFunds,
-				remaining
-			);
+			pendingAllocated = Math.min(pendingFunds, remaining);
 
 			pendingFunds -= pendingAllocated;
 			remaining -= pendingAllocated;
 		}
 
-		let status: AllocatedWeek["status"];
+		let status: AllocatedWeek['status'];
 
-        if (remaining === 0 && pendingAllocated === 0) {
-            status = "paid";
-        } else if (pendingAllocated > 0) {
-            status = "waiting_approval";
-        } else if (allocated > 0) {
-            status = "partial";
-        } else {
-            status = "unpaid";
-        }
+		if (remaining === 0 && pendingAllocated === 0) {
+			status = 'paid';
+		} else if (pendingAllocated > 0) {
+			status = 'waiting_approval';
+		} else if (allocated > 0) {
+			status = 'partial';
+		} else {
+			status = 'unpaid';
+		}
 
 		return {
 			id: obligation.id.toString(),

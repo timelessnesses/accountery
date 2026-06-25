@@ -1,6 +1,7 @@
-export const load = async ({ platform }) => { 
-    console.log('hit')
-    const transactionsFromUser = await platform?.env.AccountingDatabase.prepare(`
+export const load = async ({ platform }) => {
+	console.log('hit');
+	const transactionsFromUser = (await platform?.env.AccountingDatabase.prepare(
+		`
         WITH obligation_total AS (
             SELECT COALESCE(SUM(amount), 0) AS owed
             FROM obligations
@@ -43,19 +44,20 @@ export const load = async ({ platform }) => {
         CROSS JOIN obligation_total
 
         GROUP BY u.email;
-    `).all<TransformedUser>() as unknown as D1Result<TransformedUser>;
-    console.log('done')
-    
-    return { transactionsFromUser };
-}
+    `
+	).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
+	console.log('done');
+
+	return { transactionsFromUser };
+};
 
 type TransformedUser = {
-    email: string;
-    name: string;
-    nickname: string;
-    paid: number;
-    owed: number;
-    net: number;
-    session_expiry: string;
-    session_token: string;
-}
+	email: string;
+	name: string;
+	nickname: string;
+	paid: number;
+	owed: number;
+	net: number;
+	session_expiry: string;
+	session_token: string;
+};

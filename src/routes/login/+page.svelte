@@ -1,8 +1,7 @@
 <script lang="ts">
-	import "$lib/login.css";
-    
+	import '$lib/login.css';
 
-    import SignInGoogleButton from "$lib/signInGoogleButton.svelte";
+	import SignInGoogleButton from '$lib/signInGoogleButton.svelte';
 </script>
 
 <main>
