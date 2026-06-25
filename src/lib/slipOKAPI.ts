@@ -12,7 +12,7 @@ type BankInfoObject = {
 		value: string;
 	};
 };
-type SlipOkResponse =
+export type SlipOkResponse =
 	| {
 			// Request Success
 			success: false;
