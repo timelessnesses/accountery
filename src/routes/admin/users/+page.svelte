@@ -37,14 +37,16 @@
 		{/snippet}
 
 		{#snippet row(item)}
-			<Table.Cell>{item.session_token.substring(0, 6)}...</Table.Cell>
+			<Table.Cell>{item.session_token ? item.session_token.substring(0, 6) : 'None'}...</Table.Cell>
 			<Table.Cell>{item.name}</Table.Cell>
 			<Table.Cell>{item.email}</Table.Cell>
 			<Table.Cell>{item.nickname}</Table.Cell>
 			<Table.Cell
-				>{new Date(parseInt(item.session_expiry) * 1000).toLocaleString('en-TH', {
-					timeZone: 'Asia/Bangkok'
-				})}</Table.Cell
+				>{item.session_expiry
+					? new Date(parseInt(item.session_expiry) * 1000).toLocaleString('en-TH', {
+							timeZone: 'Asia/Bangkok'
+						})
+					: 'None'}</Table.Cell
 			>
 			<Table.Cell>{item.paid}</Table.Cell>
 			<Table.Cell>{item.owed}</Table.Cell>
