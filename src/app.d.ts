@@ -1,6 +1,9 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
+	const __GIT_COMMIT: string;
+	const __BUILD_DATE: string;
+
 	namespace App {
 		interface Platform {
 			env: Env;
@@ -19,6 +22,8 @@ declare global {
 		interface Locals {
 			user?: {
 				email: string;
+				name: string;
+				nickname: string;
 			};
 			google_oauth_client_id: string;
 		}

@@ -3,12 +3,16 @@
 	import PaymentForm from '$lib/PaymentForm.svelte';
 	import TransactionLog from '$lib/TransactionLog.svelte';
 	import Lightbox from '$lib/Lightbox.svelte';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
 	import { administrators } from '$lib/whitelisted.js';
 
 	let { data } = $props();
 
 	let selectedWeek = $state<AllocatedWeek | undefined>(undefined);
+	let accountMenuOpen = $state(false);
+	let signingOut = $state(false);
 	// Mobile: which panel is shown via the bottom toolbar.
 	let mobilePanel = $state<'calendar' | 'pay' | 'history'>('calendar');
 
@@ -35,37 +39,129 @@
 			.reduce((sum, tx) => sum + tx.amount, 0)
 	);
 	const totalOwed = $derived(data.obligations.reduce((sum, ob) => sum + ob.amount, 0));
+	const userFirstName = $derived(
+		(data.user?.name ?? data.user?.email ?? 'Account').trim().split(/\s+/)[0] || 'Account'
+	);
 	const adminDisabled = $derived(
 		Object.keys(administrators).includes(data.user?.email.split('@')[0] ?? '') === false
 	);
+	async function handleLogout() {
+		if (signingOut) return;
+		signingOut = true;
+		try {
+			const response = await fetch('/api/auth/logout', { method: 'POST' });
+			if (!response.ok) {
+				throw new Error('Failed to log out');
+			}
+			accountMenuOpen = false;
+			await goto(resolve('/login'));
+		} catch (error) {
+			console.error('Logout failed:', error);
+			accountMenuOpen = false;
+			window.location.href = '/login';
+		} finally {
+			signingOut = false;
+		}
+	}
 </script>
 
-<div class="flex h-dvh flex-col bg-background">
+	<div class="flex min-h-full flex-col bg-background">
 	<!-- Header -->
 	<header class="border-b border-border bg-card">
-		<div class="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-			<div class="flex items-center gap-3">
-				<div
-					class="flex h-15 w-15 items-center justify-center rounded-lg bg-primary text-primary-foreground"
-				>
-					<svg
-						width="100"
-						height="100"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						aria-hidden="true"
-						><rect x="3" y="4" width="18" height="18" rx="2" /><path
-							d="M3 10h18M8 2v4m8-4v4"
-						/></svg
-					>
+		<div class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+			<div class="flex items-start justify-between gap-3 sm:items-center sm:justify-start">
+				<div class="flex items-center gap-3">
+					<div class="flex h-15 w-15 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+						<svg
+							width="100"
+							height="100"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+							><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M3 10h18M8 2v4m8-4v4" /></svg
+						>
+					</div>
+					<div>
+						<h1 class="text-sm font-semibold leading-tight text-card-foreground">Weekly Payments</h1>
+						<p class="text-xs text-muted-foreground">Track and clear your weekly obligations</p>
+					</div>
 				</div>
-				<div>
-					<h1 class="text-sm font-semibold leading-tight text-card-foreground">Weekly Payments</h1>
-					<p class="text-xs text-muted-foreground">Track and clear your weekly obligations</p>
+				<div class="relative sm:hidden">
+					<button
+						onclick={() => (accountMenuOpen = !accountMenuOpen)}
+						class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-muted"
+						aria-expanded={accountMenuOpen}
+						aria-haspopup="menu"
+						aria-label="Open account menu"
+					>
+						<svg
+							class="size-5 transition-transform {accountMenuOpen ? 'rotate-180' : ''}"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+							<path d="M4 20a8 8 0 0 1 16 0" />
+						</svg>
+					</button>
+					{#if accountMenuOpen}
+						<div class="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-border bg-card p-2 shadow-xl">
+							<div class="rounded-2xl bg-muted px-3 py-2 text-center">
+								<p class="m-0 truncate text-base font-semibold text-card-foreground">{data.user?.name}</p>
+								<p class="m-0 truncate text-xs text-muted-foreground">{data.user?.email}</p>
+							</div>
+							<button
+								onclick={() => (window.location.href = '/admin')}
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-muted"
+								style={adminDisabled ? 'display: none;' : ''}
+								disabled={adminDisabled}
+							>
+								<span>Administrator Access</span>
+								<svg
+									class="size-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="M5 12h14" />
+									<path d="m12 5 7 7-7 7" />
+								</svg>
+							</button>
+							<button
+								onclick={handleLogout}
+								disabled={signingOut}
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-60"
+							>
+								<span>{signingOut ? 'Logging out...' : 'Logout'}</span>
+								<svg
+									class="size-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="M10 17l5-5-5-5" />
+									<path d="M15 12H3" />
+									<path d="M21 3v18" />
+								</svg>
+							</button>
+						</div>
+					{/if}
 				</div>
 			</div>
 			<div class="hidden items-center gap-6 sm:flex">
@@ -89,14 +185,100 @@
 					<p class="text-sm font-semibold text-foreground">{currency.format(totalOwed)}</p>
 					<p class="text-xs text-muted-foreground">&nbsp;</p>
 				</div>
-				<button
-					onclick={() => (window.location.href = '/admin')}
-					class="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted"
-					style={adminDisabled ? 'visibility: hidden; pointer-events: none; opacity: 0.5;' : ''}
-					disabled={adminDisabled}
-				>
-					Adminstrator Access
-				</button>
+				<div class="relative">
+					<button
+						onclick={() => (accountMenuOpen = !accountMenuOpen)}
+						class="hidden items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 text-left shadow-sm transition hover:bg-muted sm:flex"
+						aria-expanded={accountMenuOpen}
+						aria-haspopup="menu"
+					>
+						<div class="min-w-0 flex-1 text-right leading-none">
+							<p class="m-0 max-w-[160px] truncate text-sm font-semibold text-foreground">{userFirstName}</p>
+						</div>
+						<svg
+							class="size-4 shrink-0 text-muted-foreground transition-transform {accountMenuOpen ? 'rotate-180' : ''}"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" />
+							<path d="M4 20a8 8 0 0 1 16 0" />
+						</svg>
+					</button>
+					{#if accountMenuOpen}
+						<div class="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-border bg-card p-2 shadow-xl">
+							<div class="rounded-2xl bg-muted px-3 py-2 text-center">
+								<p class="truncate text-base font-semibold text-card-foreground">{data.user?.name}</p>
+								<p class="truncate text-xs text-muted-foreground">{data.user?.email}</p>
+							</div>
+							<button
+								onclick={() => (window.location.href = '/admin')}
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-muted"
+								style={adminDisabled ? 'display: none;' : ''}
+								disabled={adminDisabled}
+							>
+								<span>Administrator Access</span>
+								<svg
+									class="size-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="M5 12h14" />
+									<path d="m12 5 7 7-7 7" />
+								</svg>
+							</button>
+							<button
+								onclick={handleLogout}
+								disabled={signingOut}
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-60"
+							>
+								<span>{signingOut ? 'Logging out...' : 'Logout'}</span>
+								<svg
+									class="size-4"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="M10 17l5-5-5-5" />
+									<path d="M15 12H3" />
+									<path d="M21 3v18" />
+								</svg>
+							</button>
+						</div>
+					{/if}
+				</div>
+			</div>
+			<div class="mt-2 grid grid-cols-3 gap-2 sm:hidden" style="margin-bottom: 0 !important;">
+				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
+					<p class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground" style="margin-bottom: 0 !important;">Net</p>
+					{#if totalPaid < totalOwed}
+						<p class="text-xs font-bold leading-tight text-red-500" style="margin-bottom: 0 !important;">{currency.format(totalPaid - totalOwed)}</p>
+					{:else}
+						<p class="text-xs font-bold leading-tight text-success" style="margin-bottom: 0 !important;">{currency.format(totalPaid - totalOwed)}</p>
+					{/if}
+				</div>
+				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
+					<p class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground" style="margin-bottom: 0 !important;">Paid</p>
+					<p class="text-xs font-semibold leading-tight text-success" style="margin-bottom: 0 !important;">{currency.format(totalPaid)}</p>
+					<p class="text-[9px] leading-tight text-muted-foreground" style="margin-bottom: 0 !important;">+ {currency.format(totalPending)}</p>
+				</div>
+				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
+					<p class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground" style="margin-bottom: 0 !important;">Owed</p>
+					<p class="text-xs font-semibold leading-tight text-foreground" style="margin-bottom: 0 !important;">{currency.format(totalOwed)}</p>
+				</div>
 			</div>
 		</div>
 	</header>

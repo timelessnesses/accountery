@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { PUBLIC_RECEPIENT_EXPECTED_PROXY, PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING, PUBLIC_RECEPIENT_NAME_ENG, PUBLIC_RECEPIENT_NAME_THAI } from '$env/static/public';
+	import { env } from '$env/dynamic/public';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Table from '$lib/components/ui/table';
 	import { currency } from '$lib/payments.svelte';
@@ -73,10 +73,10 @@
 					checkingSlipCondition(result);
 				message = `
 ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
-- Expected Recipient Thai Name: ${expectedRecipientThaiName ? '✅' : '❌'} (EXPECTED: ${PUBLIC_RECEPIENT_NAME_THAI}, RECEIVED: ${result.data.receiver.displayName})
-- Expected Recipient English Name: ${expectedRecipientEnglishName ? '✅' : '❌'} (EXPECTED: ${PUBLIC_RECEPIENT_NAME_ENG}, RECEIVED: ${result.data.receiver.name})
-- Expected Recipient Proxy: ${expectedRecipientProxy ? '✅' : '❌'} (EXPECTED: ${PUBLIC_RECEPIENT_EXPECTED_PROXY}, RECEIVED: ${result.data.receiver.proxy.type})
-- Expected Recipient Proxy Value Ending: ${expectedRecipientProxyValueEnding ? '✅' : '❌'} (EXPECTED: ${PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING}, RECEIVED: ${result.data.receiver.proxy.value})
+- Expected Recipient Thai Name: ${expectedRecipientThaiName ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_NAME_THAI}, RECEIVED: ${result.data.receiver.displayName})
+- Expected Recipient English Name: ${expectedRecipientEnglishName ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_NAME_ENG}, RECEIVED: ${result.data.receiver.name})
+- Expected Recipient Proxy: ${expectedRecipientProxy ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_EXPECTED_PROXY}, RECEIVED: ${result.data.receiver.proxy.type})
+- Expected Recipient Proxy Value Ending: ${expectedRecipientProxyValueEnding ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING}, RECEIVED: ${result.data.receiver.proxy.value})
 				`.trim()
 			} else {
 				message = 'Unable to verify this slip';

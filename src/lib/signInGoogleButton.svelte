@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { PUBLIC_GOOGLE_OAUTH_CLIENT_ID } from '$env/static/public';
+	import { env } from '$env/dynamic/public';
 	function handleLoginRequest(response: { credential: string}) {
 		fetch('/api/auth/google-jwt', {
 			method: 'POST',
@@ -30,7 +30,7 @@
 		if (window.google) {
 			// @ts-expect-error - window.google is there
 			window.google.accounts.id.initialize({
-				client_id: PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
+				client_id: env.PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
 				callback: handleLoginRequest,
 				hd: 'tsu.ac.th'
 			});
