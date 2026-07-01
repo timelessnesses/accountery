@@ -1,5 +1,5 @@
-import { GOOGLE_OAUTH_CLIENT_SECRET } from '$env/static/private';
-import { PUBLIC_GOOGLE_OAUTH_CLIENT_ID } from '$env/static/public';
+import { env as envPrivate } from '$env/dynamic/private';
+import { env as envPublic } from '$env/dynamic/public';
 import { linkedUserAccountWithInfo } from '$lib/whitelisted';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -8,8 +8,8 @@ export type GoogleJwtRequest = {
 };
 
 const client = new OAuth2Client({
-	client_id: PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
-	client_secret: GOOGLE_OAUTH_CLIENT_SECRET
+	client_id: envPublic.PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
+	client_secret: envPrivate.GOOGLE_OAUTH_CLIENT_SECRET
 });
 
 export async function POST({ request, cookies, platform }) {
@@ -18,7 +18,7 @@ export async function POST({ request, cookies, platform }) {
 
 	const ticket = await client.verifyIdToken({
 		idToken: id_token,
-		audience: PUBLIC_GOOGLE_OAUTH_CLIENT_ID
+		audience: envPublic.PUBLIC_GOOGLE_OAUTH_CLIENT_ID
 	});
 
 	const payload = ticket.getPayload();

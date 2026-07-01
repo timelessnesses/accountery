@@ -1,7 +1,7 @@
 import { verifySessionToken } from '$lib/auth';
 import { redirect, type Handle } from '@sveltejs/kit';
 
-const publicRoutes = ['/login', '/api/auth/google-jwt'];
+const publicRoutes = ['/login', '/api/auth/google-jwt', '/api/auth/logout'];
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const env = event.platform?.env as Env;

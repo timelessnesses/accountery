@@ -1,4 +1,4 @@
-import { SLIP_OK_API_ENDPOINT, SLIP_OK_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 type BankInfoObject = {
 	displayName: string;
@@ -53,8 +53,8 @@ export type SlipOkResponse =
  */
 export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise<SlipOkResponse> {
 	console.log('Checking slip with SlipOK API:', arrayBufferToBase64(slipImage), amount);
-	const apiKey = SLIP_OK_API_KEY;
-	const apiEndpoint = SLIP_OK_API_ENDPOINT;
+	const apiKey = env.SLIP_OK_API_KEY;
+	const apiEndpoint = env.SLIP_OK_API_ENDPOINT;
 	const a = await fetch(apiEndpoint, {
 		method: 'POST',
 		headers: {
