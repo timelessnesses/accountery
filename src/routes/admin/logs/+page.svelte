@@ -10,9 +10,7 @@
 	let selectedDate = $state('');
 	const logs = $derived(data.logs as Log[]);
 	const filteredLogs = $derived(
-		selectedDate
-			? logs.filter((log) => toDateInputValue(log.date) === selectedDate)
-			: logs
+		selectedDate ? logs.filter((log) => toDateInputValue(log.date) === selectedDate) : logs
 	);
 
 	function toDateInputValue(date: Log['date']) {
@@ -51,11 +49,7 @@
 		</label>
 	</div>
 
-	<DataTable
-		data={filteredLogs}
-		searchKeys={['email', 'action', 'id']}
-		selectable
-	>
+	<DataTable data={filteredLogs} searchKeys={['email', 'action', 'id']} selectable>
 		{#snippet header()}
 			<Table.Head>ID</Table.Head>
 			<Table.Head>Date</Table.Head>

@@ -100,8 +100,8 @@
 				Tap the code to enlarge, scan it with your banking app, then upload your receipt below.
 			</p>
 			<p class="text-center text-xs leading-relaxed text-muted-foreground text-balance">
-				Bank: Kasikorn Bank<br>
-				Account Number: 233-2-85069-8<br>
+				Bank: Kasikorn Bank<br />
+				Account Number: 233-2-85069-8<br />
 				Name: MR. TUKKAPOL PONGPUNNAMAI / นาย ตรรกพล พงศ์พรรณมัย
 			</p>
 		</div>

@@ -11,9 +11,8 @@ export const POST = async ({ params, platform, locals }) => {
 		)
 		.bind(params.user)
 		.run();
-	await accountingDatabase.prepare(
-		'INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)'
-	)
+	await accountingDatabase
+		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
 		.bind(
 			params.user,
 			`Admin ${locals.user?.email} reset session for user ${params.user}`,

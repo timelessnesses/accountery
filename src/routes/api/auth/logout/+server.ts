@@ -14,11 +14,14 @@ export async function POST({ cookies, platform }) {
 				.bind(user.email)
 				.run();
 
-			await accountingDatabase.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)').bind(
-				user.email,
-				'User logged out and session token was reset.',
-				Math.floor(Date.now() / 1000)
-			).run();
+			await accountingDatabase
+				.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
+				.bind(
+					user.email,
+					'User logged out and session token was reset.',
+					Math.floor(Date.now() / 1000)
+				)
+				.run();
 		}
 	}
 

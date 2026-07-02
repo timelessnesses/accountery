@@ -48,12 +48,15 @@ export async function POST({ request, cookies, platform }) {
 		sameSite: 'strict',
 		// secure: true,
 		maxAge: 3600
-	})
-	await accountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
-		payload.email,
-		`User ${payload.email} logged in with Google OAuth. Student ID: ${studentID}.`,
-		Math.floor(Date.now() / 1000)
-	).run();
+	});
+	await accountingDatabase
+		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
+		.bind(
+			payload.email,
+			`User ${payload.email} logged in with Google OAuth. Student ID: ${studentID}.`,
+			Math.floor(Date.now() / 1000)
+		)
+		.run();
 	return new Response(JSON.stringify({ success: true }), { status: 200 });
 }
 
@@ -84,5 +87,5 @@ async function issuingNewSessionToken(studentEmail: string, database: D1Database
 }
 
 function randomString(length: number) {
-	return crypto.randomUUID()
+	return crypto.randomUUID();
 }
