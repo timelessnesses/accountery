@@ -65,13 +65,17 @@
 	}
 </script>
 
-	<div class="flex min-h-full flex-col bg-background">
+<div class="flex min-h-full flex-col bg-background">
 	<!-- Header -->
 	<header class="border-b border-border bg-card">
-		<div class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+		<div
+			class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+		>
 			<div class="flex items-start justify-between gap-3 sm:items-center sm:justify-start">
 				<div class="flex items-center gap-3">
-					<div class="flex h-15 w-15 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+					<div
+						class="flex h-15 w-15 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+					>
 						<svg
 							width="100"
 							height="100"
@@ -82,11 +86,15 @@
 							stroke-linecap="round"
 							stroke-linejoin="round"
 							aria-hidden="true"
-							><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M3 10h18M8 2v4m8-4v4" /></svg
+							><rect x="3" y="4" width="18" height="18" rx="2" /><path
+								d="M3 10h18M8 2v4m8-4v4"
+							/></svg
 						>
 					</div>
 					<div>
-						<h1 class="text-sm font-semibold leading-tight text-card-foreground">Weekly Payments</h1>
+						<h1 class="text-sm font-semibold leading-tight text-card-foreground">
+							Weekly Payments
+						</h1>
 						<p class="text-xs text-muted-foreground">Track and clear your weekly obligations</p>
 					</div>
 				</div>
@@ -113,9 +121,13 @@
 						</svg>
 					</button>
 					{#if accountMenuOpen}
-						<div class="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-border bg-card p-2 shadow-xl">
+						<div
+							class="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-border bg-card p-2 shadow-xl"
+						>
 							<div class="rounded-2xl bg-muted px-3 py-2 text-center">
-								<p class="m-0 truncate text-base font-semibold text-card-foreground">{data.user?.name}</p>
+								<p class="m-0 truncate text-base font-semibold text-card-foreground">
+									{data.user?.name}
+								</p>
 								<p class="m-0 truncate text-xs text-muted-foreground">{data.user?.email}</p>
 							</div>
 							<button
@@ -193,10 +205,14 @@
 						aria-haspopup="menu"
 					>
 						<div class="min-w-0 flex-1 text-right leading-none">
-							<p class="m-0 max-w-[160px] truncate text-sm font-semibold text-foreground">{userFirstName}</p>
+							<p class="m-0 max-w-[160px] truncate text-sm font-semibold text-foreground">
+								{userFirstName}
+							</p>
 						</div>
 						<svg
-							class="size-4 shrink-0 text-muted-foreground transition-transform {accountMenuOpen ? 'rotate-180' : ''}"
+							class="size-4 shrink-0 text-muted-foreground transition-transform {accountMenuOpen
+								? 'rotate-180'
+								: ''}"
 							viewBox="0 0 24 24"
 							fill="none"
 							stroke="currentColor"
@@ -210,9 +226,13 @@
 						</svg>
 					</button>
 					{#if accountMenuOpen}
-						<div class="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-border bg-card p-2 shadow-xl">
+						<div
+							class="absolute right-0 z-20 mt-2 w-64 rounded-3xl border border-border bg-card p-2 shadow-xl"
+						>
 							<div class="rounded-2xl bg-muted px-3 py-2 text-center">
-								<p class="truncate text-base font-semibold text-card-foreground">{data.user?.name}</p>
+								<p class="truncate text-base font-semibold text-card-foreground">
+									{data.user?.name}
+								</p>
 								<p class="truncate text-xs text-muted-foreground">{data.user?.email}</p>
 							</div>
 							<button
@@ -263,21 +283,61 @@
 			</div>
 			<div class="mt-2 grid grid-cols-3 gap-2 sm:hidden" style="margin-bottom: 0 !important;">
 				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
-					<p class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground" style="margin-bottom: 0 !important;">Net</p>
+					<p
+						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground"
+						style="margin-bottom: 0 !important;"
+					>
+						Net
+					</p>
 					{#if totalPaid < totalOwed}
-						<p class="text-xs font-bold leading-tight text-red-500" style="margin-bottom: 0 !important;">{currency.format(totalPaid - totalOwed)}</p>
+						<p
+							class="text-xs font-bold leading-tight text-red-500"
+							style="margin-bottom: 0 !important;"
+						>
+							{currency.format(totalPaid - totalOwed)}
+						</p>
 					{:else}
-						<p class="text-xs font-bold leading-tight text-success" style="margin-bottom: 0 !important;">{currency.format(totalPaid - totalOwed)}</p>
+						<p
+							class="text-xs font-bold leading-tight text-success"
+							style="margin-bottom: 0 !important;"
+						>
+							{currency.format(totalPaid - totalOwed)}
+						</p>
 					{/if}
 				</div>
 				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
-					<p class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground" style="margin-bottom: 0 !important;">Paid</p>
-					<p class="text-xs font-semibold leading-tight text-success" style="margin-bottom: 0 !important;">{currency.format(totalPaid)}</p>
-					<p class="text-[9px] leading-tight text-muted-foreground" style="margin-bottom: 0 !important;">+ {currency.format(totalPending)}</p>
+					<p
+						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground"
+						style="margin-bottom: 0 !important;"
+					>
+						Paid
+					</p>
+					<p
+						class="text-xs font-semibold leading-tight text-success"
+						style="margin-bottom: 0 !important;"
+					>
+						{currency.format(totalPaid)}
+					</p>
+					<p
+						class="text-[9px] leading-tight text-muted-foreground"
+						style="margin-bottom: 0 !important;"
+					>
+						+ {currency.format(totalPending)}
+					</p>
 				</div>
 				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
-					<p class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground" style="margin-bottom: 0 !important;">Owed</p>
-					<p class="text-xs font-semibold leading-tight text-foreground" style="margin-bottom: 0 !important;">{currency.format(totalOwed)}</p>
+					<p
+						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground"
+						style="margin-bottom: 0 !important;"
+					>
+						Owed
+					</p>
+					<p
+						class="text-xs font-semibold leading-tight text-foreground"
+						style="margin-bottom: 0 !important;"
+					>
+						{currency.format(totalOwed)}
+					</p>
 				</div>
 			</div>
 		</div>

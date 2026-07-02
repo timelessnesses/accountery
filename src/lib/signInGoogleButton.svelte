@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { env } from '$env/dynamic/public';
-	function handleLoginRequest(response: { credential: string}) {
+	function handleLoginRequest(response: { credential: string }) {
 		fetch('/api/auth/google-jwt', {
 			method: 'POST',
 			headers: {

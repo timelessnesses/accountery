@@ -8,7 +8,6 @@
 	import type { SlipOkResponse } from '$lib/slipOKAPI.js';
 	import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
 
-
 	const { data } = $props();
 
 	const pendingTransactions = $derived(data.allPendingTransactions as Transaction[]);
@@ -69,15 +68,20 @@
 			const result = (await response.json()) as SlipOkResponse;
 			let message;
 			if (result.data && result.data.success) {
-				const { expectedRecipientThaiName, expectedRecipientEnglishName, expectedRecipientProxy, expectedRecipientProxyValueEnding, allChecksPassed } =
-					checkingSlipCondition(result);
+				const {
+					expectedRecipientThaiName,
+					expectedRecipientEnglishName,
+					expectedRecipientProxy,
+					expectedRecipientProxyValueEnding,
+					allChecksPassed
+				} = checkingSlipCondition(result);
 				message = `
 ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 - Expected Recipient Thai Name: ${expectedRecipientThaiName ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_NAME_THAI}, RECEIVED: ${result.data.receiver.displayName})
 - Expected Recipient English Name: ${expectedRecipientEnglishName ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_NAME_ENG}, RECEIVED: ${result.data.receiver.name})
 - Expected Recipient Proxy: ${expectedRecipientProxy ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_EXPECTED_PROXY}, RECEIVED: ${result.data.receiver.proxy.type})
 - Expected Recipient Proxy Value Ending: ${expectedRecipientProxyValueEnding ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING}, RECEIVED: ${result.data.receiver.proxy.value})
-				`.trim()
+				`.trim();
 			} else {
 				message = 'Unable to verify this slip';
 			}
@@ -123,9 +127,12 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 				allChecksPassed: false
 			};
 		}
-		const expectedRecipientThaiName = slipOkResponse.data.receiver.displayName === PUBLIC_RECEPIENT_NAME_THAI;
-		const expectedRecipientEnglishName = slipOkResponse.data.receiver.name === PUBLIC_RECEPIENT_NAME_ENG;
-		const expectedRecipientProxy = slipOkResponse.data.receiver.proxy.type === PUBLIC_RECEPIENT_EXPECTED_PROXY;
+		const expectedRecipientThaiName =
+			slipOkResponse.data.receiver.displayName === PUBLIC_RECEPIENT_NAME_THAI;
+		const expectedRecipientEnglishName =
+			slipOkResponse.data.receiver.name === PUBLIC_RECEPIENT_NAME_ENG;
+		const expectedRecipientProxy =
+			slipOkResponse.data.receiver.proxy.type === PUBLIC_RECEPIENT_EXPECTED_PROXY;
 		const expectedRecipientProxyValueEnding = slipOkResponse.data.receiver.proxy.value.endsWith(
 			PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING
 		);

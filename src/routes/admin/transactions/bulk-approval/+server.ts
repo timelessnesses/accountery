@@ -40,15 +40,14 @@ export const POST = async ({ locals, platform, request }) => {
 		.bind(approved, ...ids)
 		.run();
 
-	await accountingDatabase.prepare(
-		'INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)'
-	)
+	await accountingDatabase
+		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
 		.bind(
 			locals.user.email,
 			`Admin ${locals.user.email} ${approved} transactions with ids: ${ids.join(', ')}`,
 			Math.floor(Date.now() / 1000)
 		)
 		.run();
-	
+
 	return json({ ok: true, changed: result.meta.changes });
 };

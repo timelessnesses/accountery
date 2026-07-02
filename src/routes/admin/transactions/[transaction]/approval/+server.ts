@@ -37,10 +37,9 @@ export const POST = async ({ locals, params, platform, request }) => {
 		)
 		.bind(approved, transactionId)
 		.run();
-	
-	await accountingDatabase.prepare(
-		'INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)'
-	)
+
+	await accountingDatabase
+		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
 		.bind(
 			locals.user.email,
 			`Admin ${locals.user.email} ${approved} transaction with id: ${transactionId}`,
