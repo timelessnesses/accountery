@@ -25,6 +25,13 @@ export const POST = async ({ request, locals, platform }) => {
         console.error('Error inserting students:', e);
         return error(400, 'Error inserting students');
     }
+
+    await platform?.env.AccountingDatabase.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)').bind(
+        locals.user.email,
+        `Admin ${locals.user.email} imported ${body.students.length} students`,
+        Math.floor(Date.now() / 1000)
+    ).run();
+
     return new Response(JSON.stringify({ ok: true }), {
         headers: { 'Content-Type': 'application/json' }
     });
