@@ -1,6 +1,7 @@
 import { env as envPrivate } from '$env/dynamic/private';
 import { env as envPublic } from '$env/dynamic/public';
 import { linkedUserAccountWithInfo } from '$lib/whitelisted';
+import { error } from '@sveltejs/kit';
 import { OAuth2Client } from 'google-auth-library';
 
 export type GoogleJwtRequest = {
@@ -13,6 +14,9 @@ const client = new OAuth2Client({
 });
 
 export async function POST({ request, cookies, platform }) {
+	if (!envPublic.PUBLIC_GOOGLE_OAUTH_CLIENT_ID || !envPrivate.GOOGLE_OAUTH_CLIENT_SECRET) { 
+		throw error(400, 'Google OAuth client ID or secret is not set in environment variables.');
+	}
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
 	const { id_token } = (await request.json()) as GoogleJwtRequest;
 
@@ -62,7 +66,7 @@ export async function POST({ request, cookies, platform }) {
 
 async function issuingNewSessionToken(studentEmail: string, database: D1Database) {
 	const studentID = studentEmail.split('@')[0];
-	const sessionToken = randomString(64);
+	const sessionToken = randomString();
 	// 1 hour
 	const sessionTokenExpiry = Math.floor(Date.now() / 1000) + 3600;
 	const studentInfo =
@@ -86,6 +90,6 @@ async function issuingNewSessionToken(studentEmail: string, database: D1Database
 	return sessionToken;
 }
 
-function randomString(length: number) {
+function randomString() {
 	return crypto.randomUUID();
 }

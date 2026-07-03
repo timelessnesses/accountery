@@ -6,7 +6,6 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
-	import { administrators } from '$lib/whitelisted.js';
 
 	let { data } = $props();
 
@@ -43,7 +42,7 @@
 		(data.user?.name ?? data.user?.email ?? 'Account').trim().split(/\s+/)[0] || 'Account'
 	);
 	const adminDisabled = $derived(
-		Object.keys(administrators).includes(data.user?.email.split('@')[0] ?? '') === false
+		!data.user?.admin
 	);
 	async function handleLogout() {
 		if (signingOut) return;

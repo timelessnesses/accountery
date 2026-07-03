@@ -1,12 +1,11 @@
-import { administrators } from '$lib/whitelisted.js';
 import { error, json } from '@sveltejs/kit';
 
 export const POST = async ({ locals, params, platform, request }) => {
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
 	}
-
-	if (!Object.keys(administrators).includes(locals.user.email.split('@')[0])) {
+	
+	if (!locals.user.admin) {
 		throw error(403, 'Forbidden');
 	}
 

@@ -21,13 +21,16 @@
 				window.location.href = '/';
 			})
 			.catch((err) => {
-				console.error('Error during authentication:', err);
+				console.error('Error during Google sign-in:', err);
 			});
 	}
 
 	const GSILoader = () => {
 		// @ts-expect-error - window.google is there
 		if (window.google) {
+			if (!env.PUBLIC_GOOGLE_OAUTH_CLIENT_ID) {
+				throw new Error('Google OAuth client ID is not set in environment variables.');
+			}
 			// @ts-expect-error - window.google is there
 			window.google.accounts.id.initialize({
 				client_id: env.PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
@@ -61,4 +64,8 @@
 	});
 </script>
 
-<div id="google-button"></div>
+{#if !env.PUBLIC_GOOGLE_OAUTH_CLIENT_ID}
+	<p class="text-red-500">Google OAuth client ID is not set in environment variables.</p>
+{:else}
+	<div id="google-button"></div>
+{/if}
