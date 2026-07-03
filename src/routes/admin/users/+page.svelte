@@ -30,11 +30,8 @@
 	let ask = $state(false);
 	let importing = $state(false);
 
-	// Raw sheet data (array of arrays) held in memory between file select and import
 	let sheetRows = $state<unknown[][]>([]);
 
-	// The three column identifiers the user types in. These are 1-based column
-	// letters/numbers (e.g. "A" or "1") referring to columns in the sheet.
 	let idColumn = $state('');
 	let nameColumn = $state('');
 	let nicknameColumn = $state('');
@@ -43,12 +40,10 @@
 		const trimmed = value.trim();
 		if (!trimmed) return -1;
 
-		// Numeric input, e.g. "1" -> index 0
 		if (/^\d+$/.test(trimmed)) {
 			return parseInt(trimmed, 10) - 1;
 		}
 
-		// Letter input, e.g. "A" -> 0, "B" -> 1
 		let index = 0;
 		for (const char of trimmed.toUpperCase()) {
 			if (char < 'A' || char > 'Z') return -1;
