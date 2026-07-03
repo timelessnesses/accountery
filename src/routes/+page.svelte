@@ -64,6 +64,18 @@
 			signingOut = false;
 		}
 	}
+	let theme = $state('light');
+
+	$effect(() => {
+		if (localStorage.getItem('theme') === 'dark') {
+			document.documentElement.classList.add('dark');
+			theme = 'dark';
+		} else {
+			document.documentElement.classList.remove('dark');
+			theme = 'light';
+		}
+	});
+
 </script>
 
 <div class="flex min-h-full flex-col bg-background">
@@ -138,13 +150,14 @@
 										localStorage.getItem('theme') === 'dark' ? 'light' : 'dark'
 									);
 									document.documentElement.classList.toggle(localStorage.getItem('theme') === 'dark' ? 'dark' : "");
+									theme = localStorage.getItem('theme') as string;
 								}}
-								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-60"
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-muted disabled:cursor-wait disabled:opacity-60"
 								style={adminDisabled ? 'display: none;' : ''}
 								disabled={adminDisabled}
 							>
 								<span>Change Theme</span>
-								{#if localStorage.getItem('theme') === 'dark'}
+								{#if theme === 'dark'}
 									<Sun class="size-4" />
 								{:else}
 									<Moon class="size-4" />
@@ -152,7 +165,7 @@
 							</button>
 							<button
 								onclick={() => (window.location.href = '/admin')}
-								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-60"
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive disabled:cursor-wait disabled:opacity-60 transition hover:bg-muted"
 								style={adminDisabled ? 'display: none;' : ''}
 								disabled={adminDisabled}
 							>
@@ -174,7 +187,7 @@
 							<button
 								onclick={handleLogout}
 								disabled={signingOut}
-								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-60"
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive disabled:cursor-wait disabled:opacity-60 transition hover:bg-muted"
 							>
 								<span>{signingOut ? 'Logging out...' : 'Logout'}</span>
 								<svg
@@ -256,8 +269,32 @@
 								<p class="truncate text-xs text-muted-foreground">{data.user?.email}</p>
 							</div>
 							<button
+								onclick={() => {
+									localStorage.setItem(
+										'theme',
+										localStorage.getItem('theme') === 'dark' ? 'light' : 'dark'
+									);
+									if (localStorage.getItem('theme') === 'dark') {
+										document.documentElement.classList.add('dark');
+									} else {
+										document.documentElement.classList.remove('dark');
+									}
+									theme = localStorage.getItem('theme') as string;
+								}}
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+								style={adminDisabled ? 'display: none;' : ''}
+								disabled={adminDisabled}
+							>
+								<span>Change Theme</span>
+								{#if theme === 'dark'}
+									<Sun class="size-4" />
+								{:else}
+									<Moon class="size-4" />
+								{/if}
+							</button>
+							<button
 								onclick={() => (window.location.href = '/admin')}
-								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-muted"
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium transition hover:bg-muted"
 								style={adminDisabled ? 'display: none;' : ''}
 								disabled={adminDisabled}
 							>
@@ -279,7 +316,7 @@
 							<button
 								onclick={handleLogout}
 								disabled={signingOut}
-								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-60"
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-muted disabled:cursor-wait disabled:opacity-60"
 							>
 								<span>{signingOut ? 'Logging out...' : 'Logout'}</span>
 								<svg
