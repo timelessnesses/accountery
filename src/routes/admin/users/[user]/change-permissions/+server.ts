@@ -26,8 +26,8 @@ export const POST = async ({ locals, params, platform, request }) => {
         `
 		)
 		.bind(admin, params.user)
-        .run();
-    
+		.run();
+
 	await accountingDatabase
 		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
 		.bind(

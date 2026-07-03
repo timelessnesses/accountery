@@ -71,11 +71,7 @@
 
 <div class="space-y-4" style="height: auto;">
 	<div class="flex items-center gap-2">
-		<input
-			bind:value={search}
-			placeholder="Search..."
-			class="w-full rounded-md border px-3 py-2"
-		/>
+		<input bind:value={search} placeholder="Search..." class="w-full rounded-md border px-3 py-2" />
 		{#if bulkActions}
 			<div class="shrink-0">
 				{@render bulkActions(selectedItems, selectedItems.length === 0)}

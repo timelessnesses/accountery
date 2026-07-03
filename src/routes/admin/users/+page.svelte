@@ -3,7 +3,7 @@
 	import * as DropDownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Button } from '$lib/components/ui/button';
 	import * as Table from '$lib/components/ui/table';
-	import * as XLSX from "xlsx";
+	import * as XLSX from 'xlsx';
 	import { Dialog } from 'bits-ui';
 	import Confirmation from '$lib/Confirmation.svelte';
 	import DropdownMenu from '$lib/components/ui/dropdown-menu/dropdown-menu.svelte';
@@ -66,7 +66,7 @@
 			const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 			sheetRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
 
-			console.log(sheetRows)
+			console.log(sheetRows);
 
 			idColumn = '';
 			nameColumn = '';
@@ -109,7 +109,9 @@
 		})
 			.then((r) => {
 				if (!r.ok) throw new Error('Failed to import student data');
-				alert(`Imported ${previewStudents.length} student${previewStudents.length > 1 ? 's' : ''} successfully`);
+				alert(
+					`Imported ${previewStudents.length} student${previewStudents.length > 1 ? 's' : ''} successfully`
+				);
 				closeDialog();
 				window.location.reload();
 			})
@@ -126,33 +128,33 @@
 
 	function makeAdmin(user: TransformedUser, changeToAdmin: boolean) {
 		fetch(`/admin/users/${user.email}/change-permissions`, {
-								method: 'POST',
-								body: JSON.stringify({
-									admin: changeToAdmin
-								})
-							})
-								.then((r) => {
-									if (!r.ok) throw new Error('Failed to update user permissions');
-									alert('User permissions updated successfully');
-									window.location.reload();
-								})
-								.catch(() => {
-									alert('Failed to update user permissions');
-								});
+			method: 'POST',
+			body: JSON.stringify({
+				admin: changeToAdmin
+			})
+		})
+			.then((r) => {
+				if (!r.ok) throw new Error('Failed to update user permissions');
+				alert('User permissions updated successfully');
+				window.location.reload();
+			})
+			.catch(() => {
+				alert('Failed to update user permissions');
+			});
 	}
 	let showDeleteConfirm = $state(false);
 	function deleteUser(user: TransformedUser) {
 		fetch(`/admin/users/${user.email}/delete`, {
-								method: 'POST'
-							})
-								.then((r) => {
-									if (!r.ok) throw new Error('Failed to delete user');
-									alert('User deleted successfully');
-									window.location.reload();
-								})
-								.catch(() => {
-									alert('Failed to delete user');
-								});
+			method: 'POST'
+		})
+			.then((r) => {
+				if (!r.ok) throw new Error('Failed to delete user');
+				alert('User deleted successfully');
+				window.location.reload();
+			})
+			.catch(() => {
+				alert('Failed to delete user');
+			});
 	}
 	let showDeleteConfirm2 = $state(false);
 	let userSelected: TransformedUser[] = $state([]);
@@ -237,14 +239,16 @@
 								.catch(() => {
 									alert('Failed to reset session');
 								});
-						}}>Reset Session</DropDownMenu.Item>
-					<DropDownMenu.Item 
+						}}>Reset Session</DropDownMenu.Item
+					>
+					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
 						onclick={() => {
 							confirm = true;
 							userToChange = user;
 							changeToAdmin = true;
-					}}>
+						}}
+					>
 						Make Admin
 					</DropDownMenu.Item>
 					<DropDownMenu.Item
@@ -253,7 +257,8 @@
 							confirm = true;
 							userToChange = user;
 							changeToAdmin = false;
-						}}>Remove Admin
+						}}
+						>Remove Admin
 					</DropDownMenu.Item>
 					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
@@ -304,8 +309,8 @@
 			<Button
 				onclick={() => {
 					fileInput.click();
-				}}
-			>Import Student Data</Button>
+				}}>Import Student Data</Button
+			>
 		{/snippet}
 	</DataTable>
 </div>
@@ -417,37 +422,59 @@
 					disabled={previewStudents.length === 0 || importing}
 					onclick={confirmImport}
 				>
-					{importing ? 'Importing…' : `Import ${previewStudents.length || ''} student${previewStudents.length === 1 ? '' : 's'}`}
+					{importing
+						? 'Importing…'
+						: `Import ${previewStudents.length || ''} student${previewStudents.length === 1 ? '' : 's'}`}
 				</button>
 			</div>
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>
 
-<Confirmation show={confirm} title="Confirm" description="Are you sure you want to make {userToChange?.name} ({userToChange?.email}) {changeToAdmin ? 'admin' : 'not admin'}?" confirm={() => {
-	makeAdmin(userToChange!, changeToAdmin);
-}} cancel={() => {
-	confirm = false;
-	userToChange = null;
-	changeToAdmin = false;
-}}>
-<div></div>
-</Confirmation>
-
-<Confirmation show={showDeleteConfirm} title={`Delete ${userToChange?.name}`} description={`Are you sure to delete ${userToChange?.name} (${userToChange?.email}) account?`} confirm={() => {
-	deleteUser(userToChange!);
-}} cancel={() => {
-	showDeleteConfirm = false;
-	userToChange = null;
-}}>
+<Confirmation
+	show={confirm}
+	title="Confirm"
+	description="Are you sure you want to make {userToChange?.name} ({userToChange?.email}) {changeToAdmin
+		? 'admin'
+		: 'not admin'}?"
+	confirm={() => {
+		makeAdmin(userToChange!, changeToAdmin);
+	}}
+	cancel={() => {
+		confirm = false;
+		userToChange = null;
+		changeToAdmin = false;
+	}}
+>
 	<div></div>
 </Confirmation>
 
-<Confirmation show={showDeleteConfirm2} title={`Delete ${userSelected.length} User${userSelected.length > 1 ? 's' : ''}`} description={`Are you sure to delete ${userSelected.length} accounts?`} confirm={() => {
-	deleteUsers(userSelected!);
-}} cancel={() => {
-	showDeleteConfirm2 = false;
-	userSelected = []
-}}>
+<Confirmation
+	show={showDeleteConfirm}
+	title={`Delete ${userToChange?.name}`}
+	description={`Are you sure to delete ${userToChange?.name} (${userToChange?.email}) account?`}
+	confirm={() => {
+		deleteUser(userToChange!);
+	}}
+	cancel={() => {
+		showDeleteConfirm = false;
+		userToChange = null;
+	}}
+>
+	<div></div>
+</Confirmation>
+
+<Confirmation
+	show={showDeleteConfirm2}
+	title={`Delete ${userSelected.length} User${userSelected.length > 1 ? 's' : ''}`}
+	description={`Are you sure to delete ${userSelected.length} accounts?`}
+	confirm={() => {
+		deleteUsers(userSelected!);
+	}}
+	cancel={() => {
+		showDeleteConfirm2 = false;
+		userSelected = [];
+	}}
+>
 	<div></div>
 </Confirmation>

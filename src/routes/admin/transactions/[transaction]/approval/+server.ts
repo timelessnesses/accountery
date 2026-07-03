@@ -4,7 +4,7 @@ export const POST = async ({ locals, params, platform, request }) => {
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
 	}
-	
+
 	if (!locals.user.admin) {
 		throw error(403, 'Forbidden');
 	}

@@ -13,7 +13,7 @@
 			credentials: 'include'
 		})
 			.then((r) => {
-				if (!r.ok) throw new Error('Failed to sign in with Google');	
+				if (!r.ok) throw new Error('Failed to sign in with Google');
 				window.location.href = '/';
 			})
 			.catch((err) => {
@@ -28,11 +28,14 @@
 			if (!env.PUBLIC_GOOGLE_OAUTH_CLIENT_ID) {
 				throw new Error('Google OAuth client ID is not set in environment variables.');
 			}
+			if (!env.PUBLIC_ORGANIZATION_DOMAIN) {
+				throw new Error('Organization domain is not set in environment variables.');
+			}
 			// @ts-expect-error - window.google is there
 			window.google.accounts.id.initialize({
 				client_id: env.PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
 				callback: handleLoginRequest,
-				hd: 'tsu.ac.th'
+				hd: env.PUBLIC_ORGANIZATION_DOMAIN
 			});
 			// @ts-expect-error - window.google is there
 			window.google.accounts.id.renderButton(document.getElementById('google-button')!, {
