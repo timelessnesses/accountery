@@ -153,8 +153,8 @@
 									theme = localStorage.getItem('theme') as string;
 								}}
 								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-muted disabled:cursor-wait disabled:opacity-60"
-								style={adminDisabled ? 'display: none;' : ''}
-								disabled={adminDisabled}
+								// style={adminDisabled ? 'display: none;' : ''}
+								// disabled={adminDisabled}
 							>
 								<span>Change Theme</span>
 								{#if theme === 'dark'}
@@ -282,8 +282,8 @@
 									theme = localStorage.getItem('theme') as string;
 								}}
 								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-muted disabled:cursor-wait disabled:opacity-60"
-								style={adminDisabled ? 'display: none;' : ''}
-								disabled={adminDisabled}
+								// style={adminDisabled ? 'display: none;' : ''}
+								// disabled={adminDisabled}
 							>
 								<span>Change Theme</span>
 								{#if theme === 'dark'}
