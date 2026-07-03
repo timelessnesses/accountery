@@ -43,9 +43,7 @@
 	const userFirstName = $derived(
 		(data.user?.name ?? data.user?.email ?? 'Account').trim().split(/\s+/)[0] || 'Account'
 	);
-	const adminDisabled = $derived(
-		!data.user?.admin
-	);
+	const adminDisabled = $derived(!data.user?.admin);
 	async function handleLogout() {
 		if (signingOut) return;
 		signingOut = true;
@@ -75,7 +73,6 @@
 			theme = 'light';
 		}
 	});
-
 </script>
 
 <div class="flex min-h-full flex-col bg-background">
@@ -149,7 +146,9 @@
 										'theme',
 										localStorage.getItem('theme') === 'dark' ? 'light' : 'dark'
 									);
-									document.documentElement.classList.toggle(localStorage.getItem('theme') === 'dark' ? 'dark' : "");
+									document.documentElement.classList.toggle(
+										localStorage.getItem('theme') === 'dark' ? 'dark' : ''
+									);
 									theme = localStorage.getItem('theme') as string;
 								}}
 								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-muted disabled:cursor-wait disabled:opacity-60"

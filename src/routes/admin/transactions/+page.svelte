@@ -231,8 +231,14 @@
 	</DataTable>
 </main>
 
-<Confirmation show={confirm} title="Confirm" description="Are you sure you want to {approvedStatusToUpdate} these transactions?" confirm={() => {
-	updateTransactions(transactionsToUpdate, approvedStatusToUpdate);
-}} cancel={closeConfirm}>
-<div></div>
+<Confirmation
+	show={confirm}
+	title="Confirm"
+	description="Are you sure you want to {approvedStatusToUpdate} these transactions?"
+	confirm={() => {
+		updateTransactions(transactionsToUpdate, approvedStatusToUpdate);
+	}}
+	cancel={closeConfirm}
+>
+	<div></div>
 </Confirmation>

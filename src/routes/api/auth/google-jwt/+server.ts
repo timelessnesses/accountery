@@ -14,7 +14,7 @@ const client = new OAuth2Client({
 });
 
 export async function POST({ request, cookies, platform }) {
-	if (!envPublic.PUBLIC_GOOGLE_OAUTH_CLIENT_ID || !envPrivate.GOOGLE_OAUTH_CLIENT_SECRET) { 
+	if (!envPublic.PUBLIC_GOOGLE_OAUTH_CLIENT_ID || !envPrivate.GOOGLE_OAUTH_CLIENT_SECRET) {
 		throw error(400, 'Google OAuth client ID or secret is not set in environment variables.');
 	}
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;

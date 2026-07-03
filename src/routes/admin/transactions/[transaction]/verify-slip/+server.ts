@@ -80,8 +80,7 @@ async function checkSlipOkCacheBeforeCallingSlipOkApi(
 				)
 				.run();
 			return response;
-		}
-		catch (err) {
+		} catch (err) {
 			throw error(500, `SlipOK API isn't setup correctly or unreachable: ${err}`);
 		}
 	}
