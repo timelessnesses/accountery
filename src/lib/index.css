@@ -35,6 +35,44 @@
 	--radius: 0.75rem;
 }
 
+:root {
+	color-scheme: light;
+}
+
+.dark {
+	color-scheme: dark;
+
+	/* Main */
+	--color-background: #111827; /* gray-900 */
+	--color-foreground: #f3f4f6;
+
+	/* Surfaces */
+	--color-card: #1f2937;
+	--color-card-foreground: #f3f4f6;
+
+	/* Secondary */
+	--color-muted: #374151;
+	--color-muted-foreground: #9ca3af;
+
+	/* Borders */
+	--color-border: #374151;
+
+	/* Inputs */
+	--color-input: #1f2937;
+
+	/* Primary */
+	--color-primary: #7eb7fd !important;
+	--color-primary-foreground: #0f172a;
+
+	/* Accent */
+	--color-accent: #334155;
+	--color-accent-foreground: #f3f4f6;
+
+	/* Destructive */
+	--color-destructive: #ef4444;
+	--color-destructive-foreground: #ffffff;
+}
+
 * {
 	border-color: var(--color-border);
 }

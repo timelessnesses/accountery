@@ -6,6 +6,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
+	import Sun from '@tabler/icons-svelte/icons/sun';
+	import Moon from '@tabler/icons-svelte/icons/moon';
 
 	let { data } = $props();
 
@@ -130,8 +132,27 @@
 								<p class="m-0 truncate text-xs text-muted-foreground">{data.user?.email}</p>
 							</div>
 							<button
+								onclick={() => {
+									localStorage.setItem(
+										'theme',
+										localStorage.getItem('theme') === 'dark' ? 'light' : 'dark'
+									);
+									document.documentElement.classList.toggle(localStorage.getItem('theme') === 'dark' ? 'dark' : "");
+								}}
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-60"
+								style={adminDisabled ? 'display: none;' : ''}
+								disabled={adminDisabled}
+							>
+								<span>Change Theme</span>
+								{#if localStorage.getItem('theme') === 'dark'}
+									<Sun class="size-4" />
+								{:else}
+									<Moon class="size-4" />
+								{/if}
+							</button>
+							<button
 								onclick={() => (window.location.href = '/admin')}
-								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-muted"
+								class="mt-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-wait disabled:opacity-60"
 								style={adminDisabled ? 'display: none;' : ''}
 								disabled={adminDisabled}
 							>
