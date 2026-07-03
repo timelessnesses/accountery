@@ -65,6 +65,8 @@
 			const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 			sheetRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
 
+			console.log(sheetRows)
+
 			idColumn = '';
 			nameColumn = '';
 			nicknameColumn = '';
@@ -104,7 +106,8 @@
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ students: previewStudents })
 		})
-			.then(() => {
+			.then((r) => {
+				if (!r.ok) throw new Error('Failed to import student data');
 				alert(`Imported ${previewStudents.length} student${previewStudents.length > 1 ? 's' : ''} successfully`);
 				closeDialog();
 				window.location.reload();
@@ -117,7 +120,7 @@
 			});
 	}
 	let confirm = $state(false);
-	let userToChange: TransformedUser | null = null;
+	let userToChange: TransformedUser | null = $state(null);
 	let changeToAdmin = $state(false);
 
 	function makeAdmin(user: TransformedUser, changeToAdmin: boolean) {
@@ -127,7 +130,8 @@
 									admin: changeToAdmin
 								})
 							})
-								.then(() => {
+								.then((r) => {
+									if (!r.ok) throw new Error('Failed to update user permissions');
 									alert('User permissions updated successfully');
 									window.location.reload();
 								})
@@ -190,7 +194,8 @@
 							fetch(`/admin/users/${user.email}/reset-session`, {
 								method: 'POST'
 							})
-								.then(() => {
+								.then((r) => {
+									if (!r.ok) throw new Error('Failed to reset session');
 									alert('Session reset successfully');
 								})
 								.catch(() => {
@@ -231,7 +236,10 @@
 							});
 						})
 					)
-						.then(() => {
+						.then((responses) => {
+							if (!responses.every((r) => r.ok)) {
+								throw new Error('Failed to reset session for all selected users');
+							}
 							alert('Session reset successfully for selected users');
 							window.location.reload();
 						})

@@ -12,16 +12,13 @@
 			}),
 			credentials: 'include'
 		})
-			.then((res) =>
-				res.json<{
-					token: string;
-				}>()
-			)
-			.then(() => {
+			.then((r) => {
+				if (!r.ok) throw new Error('Failed to sign in with Google');	
 				window.location.href = '/';
 			})
 			.catch((err) => {
 				console.error('Error during Google sign-in:', err);
+				alert('Failed to sign in with Google. Please try again.');
 			});
 	}
 
