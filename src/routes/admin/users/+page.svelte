@@ -6,6 +6,7 @@
 	import * as XLSX from "xlsx";
 	import { Dialog } from 'bits-ui';
 	import Confirmation from '$lib/Confirmation.svelte';
+	import DropdownMenu from '$lib/components/ui/dropdown-menu/dropdown-menu.svelte';
 
 	const { data } = $props();
 
@@ -139,6 +140,41 @@
 									alert('Failed to update user permissions');
 								});
 	}
+	let showDeleteConfirm = $state(false);
+	function deleteUser(user: TransformedUser) {
+		fetch(`/admin/users/${user.email}/delete`, {
+								method: 'POST'
+							})
+								.then((r) => {
+									if (!r.ok) throw new Error('Failed to delete user');
+									alert('User deleted successfully');
+									window.location.reload();
+								})
+								.catch(() => {
+									alert('Failed to delete user');
+								});
+	}
+	let showDeleteConfirm2 = $state(false);
+	let userSelected: TransformedUser[] = $state([]);
+	function deleteUsers(users: TransformedUser[]) {
+		Promise.all(
+			users.map((user) => {
+				return fetch(`/admin/users/${user.email}/delete`, {
+					method: 'POST'
+				});
+			})
+		)
+			.then((responses) => {
+				if (!responses.every((r) => r.ok)) {
+					throw new Error('Failed to delete all selected users');
+				}
+				alert('Selected users deleted successfully');
+				window.location.reload();
+			})
+			.catch(() => {
+				alert('Failed to delete all selected users');
+			});
+	}
 </script>
 
 <h1>Users</h1>
@@ -201,8 +237,7 @@
 								.catch(() => {
 									alert('Failed to reset session');
 								});
-						}}>Reset Session</DropDownMenu.Item
-					>
+						}}>Reset Session</DropDownMenu.Item>
 					<DropDownMenu.Item 
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
 						onclick={() => {
@@ -218,8 +253,17 @@
 							confirm = true;
 							userToChange = user;
 							changeToAdmin = false;
-						}}>Remove Admin</DropDownMenu.Item>
-
+						}}>Remove Admin
+					</DropDownMenu.Item>
+					<DropDownMenu.Item
+						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+						onclick={() => {
+							showDeleteConfirm = true;
+							userToChange = user;
+						}}
+					>
+						Delete User
+					</DropDownMenu.Item>
 				</DropDownMenu.Content>
 			</DropDownMenu.Root>
 		{/snippet}
@@ -248,6 +292,15 @@
 						});
 				}}>Reset {selected.length} Session Token{selected.length > 1 ? 's' : ''}</Button
 			>
+			<Button
+				{disabled}
+				onclick={() => {
+					showDeleteConfirm2 = true;
+					userSelected = selected;
+				}}
+			>
+				Delete {selected.length} User{selected.length > 1 ? 's' : ''}
+			</Button>
 			<Button
 				onclick={() => {
 					fileInput.click();
@@ -379,4 +432,22 @@
 	changeToAdmin = false;
 }}>
 <div></div>
+</Confirmation>
+
+<Confirmation show={showDeleteConfirm} title={`Delete ${userToChange?.name}`} description={`Are you sure to delete ${userToChange?.name} (${userToChange?.email}) account?`} confirm={() => {
+	deleteUser(userToChange!);
+}} cancel={() => {
+	showDeleteConfirm = false;
+	userToChange = null;
+}}>
+	<div></div>
+</Confirmation>
+
+<Confirmation show={showDeleteConfirm2} title={`Delete ${userSelected.length} User${userSelected.length > 1 ? 's' : ''}`} description={`Are you sure to delete ${userSelected.length} accounts?`} confirm={() => {
+	deleteUsers(userSelected!);
+}} cancel={() => {
+	showDeleteConfirm2 = false;
+	userSelected = []
+}}>
+	<div></div>
 </Confirmation>
