@@ -24,6 +24,7 @@ declare global {
 				email: string;
 				name: string;
 				nickname: string;
+				admin: boolean;
 			};
 			google_oauth_client_id: string;
 		}

@@ -1,6 +1,5 @@
 import { checkSlip, type SlipOkResponse } from '$lib/slipOKAPI';
 import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
-import { administrators } from '$lib/whitelisted.js';
 import { error, json } from '@sveltejs/kit';
 import path from 'path';
 
@@ -9,7 +8,7 @@ export const POST = async ({ locals, params, platform }) => {
 		throw error(401, 'Unauthorized');
 	}
 
-	if (!Object.keys(administrators).includes(locals.user.email.split('@')[0])) {
+	if (!locals.user.admin) {
 		throw error(403, 'Forbidden');
 	}
 
@@ -66,20 +65,25 @@ async function checkSlipOkCacheBeforeCallingSlipOkApi(
 		.bind(transactionId)
 		.first<SlipOkCacheEntry>();
 	if (!res) {
-		const response = await checkSlip(await slipObject.arrayBuffer(), amount);
-		await db
-			.prepare('INSERT INTO slipok_cache (transaction_id, slipok_response) VALUES (?, ?)')
-			.bind(transactionId, JSON.stringify(response))
-			.run();
-		await db
-			.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
-			.bind(
-				adminEmail,
-				`Admin ${adminEmail} checked slip for transaction ${transactionId} from SlipOK API`,
-				Math.floor(Date.now() / 1000)
-			)
-			.run();
-		return response;
+		try {
+			const response = await checkSlip(await slipObject.arrayBuffer(), amount);
+			await db
+				.prepare('INSERT INTO slipok_cache (transaction_id, slipok_response) VALUES (?, ?)')
+				.bind(transactionId, JSON.stringify(response))
+				.run();
+			await db
+				.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
+				.bind(
+					adminEmail,
+					`Admin ${adminEmail} checked slip for transaction ${transactionId} from SlipOK API`,
+					Math.floor(Date.now() / 1000)
+				)
+				.run();
+			return response;
+		}
+		catch (err) {
+			throw error(500, `SlipOK API isn't setup correctly or unreachable: ${err}`);
+		}
 	}
 	await db
 		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')

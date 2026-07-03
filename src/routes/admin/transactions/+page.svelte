@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import Confirmation from '$lib/Confirmation.svelte';
 	import DataTable from '$lib/DataTable.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Table from '$lib/components/ui/table';
@@ -79,6 +80,19 @@
 		} finally {
 			updating = false;
 		}
+	}
+	let confirm = $state(false);
+	function closeConfirm() {
+		confirm = false;
+		transactionsToUpdate = [];
+		approvedStatusToUpdate = 'approved';
+	}
+	let transactionsToUpdate: Transaction[] = [];
+	let approvedStatusToUpdate: 'approved' | 'rejected' = 'approved';
+	function confirmationDoing(transactions: Transaction[], approved: 'approved' | 'rejected') {
+		confirm = true;
+		transactionsToUpdate = transactions;
+		approvedStatusToUpdate = approved;
 	}
 </script>
 
@@ -194,25 +208,31 @@
 			</div>
 		{/snippet}
 
-		{#snippet bulkActions(selected)}
+		{#snippet bulkActions(selected, disabled)}
 			<div class="flex flex-wrap gap-2">
 				<Button
 					size="sm"
 					class="bg-success text-success-foreground hover:bg-success/80"
-					disabled={updating}
-					onclick={() => updateTransactions(selected, 'approved')}
+					disabled={updating || disabled}
+					onclick={() => confirmationDoing(selected, 'approved')}
 				>
-					Approve all
+					Approve all {selected.length} Transaction{selected.length > 1 ? 's' : ''}
 				</Button>
 				<Button
 					size="sm"
 					variant="destructive"
-					disabled={updating}
-					onclick={() => updateTransactions(selected, 'rejected')}
+					disabled={updating || disabled}
+					onclick={() => confirmationDoing(selected, 'rejected')}
 				>
-					Deny all
+					Deny all {selected.length} Transaction{selected.length > 1 ? 's' : ''}
 				</Button>
 			</div>
 		{/snippet}
 	</DataTable>
 </main>
+
+<Confirmation show={confirm} title="Confirm" description="Are you sure you want to {approvedStatusToUpdate} these transactions?" confirm={() => {
+	updateTransactions(transactionsToUpdate, approvedStatusToUpdate);
+}} cancel={closeConfirm}>
+<div></div>
+</Confirmation>

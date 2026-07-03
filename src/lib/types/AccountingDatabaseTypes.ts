@@ -4,6 +4,7 @@ export type User = {
 	email: string;
 	nickname: string;
 	session_expiry: Date;
+	role: 'user' | 'admin';
 };
 
 export type Transaction = {

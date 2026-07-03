@@ -55,6 +55,9 @@ export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise
 	console.log('Checking slip with SlipOK API:', arrayBufferToBase64(slipImage), amount);
 	const apiKey = env.SLIP_OK_API_KEY;
 	const apiEndpoint = env.SLIP_OK_API_ENDPOINT;
+	if (!apiKey || !apiEndpoint) {
+		throw new Error('SlipOK API key or endpoint is not set in environment variables.');
+	}
 	const a = await fetch(apiEndpoint, {
 		method: 'POST',
 		headers: {

@@ -12,7 +12,7 @@
 		row: Snippet<[T]>;
 
 		actions?: Snippet<[T]>;
-		bulkActions?: Snippet<[T[]]>;
+		bulkActions?: Snippet<[T[], boolean]>;
 		detail?: Snippet<[T]>;
 	};
 
@@ -70,12 +70,18 @@
 </script>
 
 <div class="space-y-4" style="height: auto;">
-	<input bind:value={search} placeholder="Search..." class="w-full rounded-md border px-3 py-2" />
-	{#if bulkActions && selectedItems.length > 0}
-		<div class="ml-2 shrink-0">
-			{@render bulkActions(selectedItems)}
-		</div>
-	{/if}
+	<div class="flex items-center gap-2">
+		<input
+			bind:value={search}
+			placeholder="Search..."
+			class="w-full rounded-md border px-3 py-2"
+		/>
+		{#if bulkActions}
+			<div class="shrink-0">
+				{@render bulkActions(selectedItems, selectedItems.length === 0)}
+			</div>
+		{/if}
+	</div>
 	<div class="overflow-x-auto">
 		<div class="rounded-md border">
 			<Table.Root class="w-full">
