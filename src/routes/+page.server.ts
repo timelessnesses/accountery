@@ -2,6 +2,8 @@ import { buildAllocatedWeeks } from '$lib/paymentAlloc.js';
 import { unixTimestampToDate } from '$lib/date.js';
 import type { Obligation, Transaction } from '$lib/types/AccountingDatabaseTypes';
 import { redirect } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
+import { env as envPublic } from '$env/dynamic/public';
 
 export const load = async ({ locals, platform }) => {
 	if (!locals.user) {
@@ -25,6 +27,8 @@ export const load = async ({ locals, platform }) => {
 	})) as Obligation[];
 	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
 	const nextDue = allocatedWeeks.find((week) => week.status !== 'paid');
+
+	console.log(env, envPublic)
 
 	return {
 		user: locals.user,
