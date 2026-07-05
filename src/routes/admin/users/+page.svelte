@@ -52,16 +52,32 @@
 		return index - 1;
 	}
 
+	function isUTF8(bytes: Uint8Array) {
+		try {
+			new TextDecoder("utf-8").decode(bytes);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
 	function fileChange(event: Event) {
 		const file = (event.target as HTMLInputElement).files?.[0];
 		if (!file) return;
 
 		const reader = new FileReader();
 		reader.onload = (e) => {
-			const result = e.target?.result;
+			const result = e.target?.result as ArrayBuffer | null | undefined;
 			if (!result) return;
 
-			const workbook = XLSX.read(result, { type: 'array' });
+
+
+			let workbook;
+			if (isUTF8(new Uint8Array(result))) {
+				workbook = XLSX.read(new TextDecoder("utf-8").decode(result), { type: 'string' });
+			} else {
+				workbook = XLSX.read(result, { type: 'array' });
+			}
 			const firstSheet = workbook.Sheets[workbook.SheetNames[sheetNumber - 1] || workbook.SheetNames[0]];
 			sheetRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
 
