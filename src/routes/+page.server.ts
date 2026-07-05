@@ -28,7 +28,7 @@ export const load = async ({ locals, platform }) => {
 	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
 	const nextDue = allocatedWeeks.find((week) => week.status !== 'paid');
 
-	console.log(env, envPublic)
+	console.log(env, envPublic);
 
 	return {
 		user: locals.user,
