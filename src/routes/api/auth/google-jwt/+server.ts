@@ -42,7 +42,7 @@ export async function POST({ request, cookies, platform }) {
 		.prepare('SELECT * FROM users WHERE email = ?')
 		.bind(payload.email)
 		.all();
-	
+
 	if (existsInWhitelist.results.length === 0 && env.ADMIN_EMAIL !== payload.email) {
 		return new Response(JSON.stringify({ error: 'Student ID not whitelisted' }), { status: 400 });
 	}

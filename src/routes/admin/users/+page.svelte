@@ -54,7 +54,7 @@
 
 	function isUTF8(bytes: Uint8Array) {
 		try {
-			new TextDecoder("utf-8").decode(bytes);
+			new TextDecoder('utf-8').decode(bytes);
 			return true;
 		} catch {
 			return false;
@@ -70,15 +70,14 @@
 			const result = e.target?.result as ArrayBuffer | null | undefined;
 			if (!result) return;
 
-
-
 			let workbook;
 			if (isUTF8(new Uint8Array(result))) {
-				workbook = XLSX.read(new TextDecoder("utf-8").decode(result), { type: 'string' });
+				workbook = XLSX.read(new TextDecoder('utf-8').decode(result), { type: 'string' });
 			} else {
 				workbook = XLSX.read(result, { type: 'array' });
 			}
-			const firstSheet = workbook.Sheets[workbook.SheetNames[sheetNumber - 1] || workbook.SheetNames[0]];
+			const firstSheet =
+				workbook.Sheets[workbook.SheetNames[sheetNumber - 1] || workbook.SheetNames[0]];
 			sheetRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
 
 			console.log(sheetRows);
@@ -195,6 +194,43 @@
 	}
 	let nameDialogOpen = $state(false);
 	let sheetNumber = $state(1);
+	let studentEmailChangedTo = $state('');
+	let studentNameChangedTo = $state('');
+	let studentNicknameChangedTo = $state('');
+	function closeNameDialog() {
+		nameDialogOpen = false;
+		studentEmailChangedTo = '';
+		studentNameChangedTo = '';
+		studentNicknameChangedTo = '';
+	}
+	async function confirmStudentChange() {
+		if (previewStudents.length === 0) return;
+		importing = true;
+
+		fetch('/admin/users/${userToChange?.email}/change-details', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				email: studentEmailChangedTo,
+				name: studentNameChangedTo,
+				nickname: studentNicknameChangedTo
+			})
+		})
+			.then((r) => {
+				if (!r.ok) throw new Error('Failed to change student details');
+				alert(
+					`Changed ${userToChange?.name} (${userToChange?.email}) details successfully`
+				);
+				closeNameDialog();
+				window.location.reload();
+			})
+			.catch(() => {
+				alert('Failed to change student details');
+			})
+			.finally(() => {
+				importing = false;
+			});
+	}
 </script>
 
 <h1>Users</h1>
@@ -289,9 +325,15 @@
 					</DropDownMenu.Item>
 					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
-
+						onclick={() => {
+							nameDialogOpen = true;
+							userToChange = user;
+							studentEmailChangedTo = user.email;
+							studentNameChangedTo = user.name;
+							studentNicknameChangedTo = user.nickname;
+						}}
 					>
-						
+						Change Details
 					</DropDownMenu.Item>
 				</DropDownMenu.Content>
 			</DropDownMenu.Root>
@@ -363,28 +405,19 @@
 				data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95
 				data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95"
 		>
-			<Dialog.Title class="text-lg font-semibold">Student Name</Dialog.Title>
+			<Dialog.Title class="text-lg font-semibold">Student Details</Dialog.Title>
 			<Dialog.Description class="mt-1 text-sm text-muted-foreground">
-				Tell us which column holds each field. Use a column letter (A, B, C…) or number (1, 2, 3…).
+				Change the user's details.
 			</Dialog.Description>
 
 			<div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+				
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Sheet Number</span>
-					<input
-						type="number"
-						bind:value={sheetNumber}
-						placeholder="e.g. 1"
-						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
-							placeholder:text-muted-foreground
-							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-					/>
-					<br>
-					<span class="text-sm font-medium">Student ID column</span>
+					<span class="text-sm font-medium">Student Email</span>
 					<input
 						type="text"
-						bind:value={idColumn}
-						placeholder="e.g. A"
+						bind:value={studentEmailChangedTo}
+						placeholder="e.g. student@tsu.ac.th"
 						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
 							placeholder:text-muted-foreground
 							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
@@ -392,11 +425,11 @@
 				</label>
 
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Student name column</span>
+					<span class="text-sm font-medium">Student name</span>
 					<input
 						type="text"
-						bind:value={nameColumn}
-						placeholder="e.g. B"
+						bind:value={studentNameChangedTo}
+						placeholder="e.g. John Doe"
 						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
 							placeholder:text-muted-foreground
 							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
@@ -404,61 +437,33 @@
 				</label>
 
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Student nickname column</span>
+					<span class="text-sm font-medium">Student nickname</span>
 					<input
 						type="text"
-						bind:value={nicknameColumn}
-						placeholder="e.g. C (optional)"
+						bind:value={studentNicknameChangedTo}
+						placeholder="e.g. John"
 						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
 							placeholder:text-muted-foreground
 							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
 					/>
 				</label>
 			</div>
-
-			{#if idColumn.trim() && nameColumn.trim()}
-				<div class="mt-5">
-					<p class="mb-2 text-sm font-medium">
-						Preview — {previewStudents.length} student{previewStudents.length === 1 ? '' : 's'} found
-					</p>
-					<div class="max-h-64 overflow-y-auto rounded-md border">
-						<DataTable data={previewStudents.slice(0, 50)} selectable={false}>
-							{#snippet header()}
-								<Table.Head>Student ID</Table.Head>
-								<Table.Head>Name</Table.Head>
-								<Table.Head>Nickname</Table.Head>
-							{/snippet}
-							{#snippet row(student: StudentRow)}
-								<Table.Cell>{student.id}</Table.Cell>
-								<Table.Cell>{student.name}</Table.Cell>
-								<Table.Cell>{student.nickname || '—'}</Table.Cell>
-							{/snippet}
-						</DataTable>
-					</div>
-					{#if previewStudents.length > 50}
-						<p class="mt-1 text-xs text-muted-foreground">
-							Showing first 50 of {previewStudents.length} rows.
-						</p>
-					{/if}
-				</div>
-			{/if}
-
 			<div class="mt-6 flex justify-end gap-2">
 				<Dialog.Close
 					class="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
-					onclick={closeDialog}
+					onclick={closeNameDialog}
 				>
 					Cancel
 				</Dialog.Close>
 				<button
 					class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground
 						hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-					disabled={previewStudents.length === 0 || importing}
-					onclick={confirmImport}
+					onclick={confirmStudentChange}
+					disabled={(!studentEmailChangedTo.trim() && !studentNameChangedTo.trim() && !studentNicknameChangedTo.trim()) || importing}
 				>
 					{importing
-						? 'Importing…'
-						: `Import ${previewStudents.length || ''} student${previewStudents.length === 1 ? '' : 's'}`}
+						? 'Changing…'
+						: `Change ${userToChange?.name || ''} (${userToChange?.email || ''}) details`}
 				</button>
 			</div>
 		</Dialog.Content>
@@ -487,6 +492,17 @@
 			</Dialog.Description>
 
 			<div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<label class="flex flex-col gap-1.5 sm:col-span-3 items-center text-center" for="sheetNumber">
+					<span class="text-sm font-medium">Sheet Number</span>
+					<input
+						type="number"
+						bind:value={sheetNumber}
+						placeholder="e.g. 1"
+						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
+							placeholder:text-muted-foreground
+							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+					/>
+				</label>
 				<label class="flex flex-col gap-1.5">
 					<span class="text-sm font-medium">Student ID column</span>
 					<input
