@@ -88,7 +88,7 @@
 		approvedStatusToUpdate = 'approved';
 	}
 	let transactionsToUpdate: Transaction[] = [];
-	let approvedStatusToUpdate: 'approved' | 'rejected' = 'approved';
+	let approvedStatusToUpdate: 'approved' | 'rejected' = $state('approved');
 	function confirmationDoing(transactions: Transaction[], approved: 'approved' | 'rejected') {
 		confirm = true;
 		transactionsToUpdate = transactions;
@@ -122,6 +122,7 @@
 	<DataTable
 		data={filteredTransactions}
 		searchKeys={['email', 'description', 'type', 'approved']}
+		key={(tx) => tx.id}
 		selectable
 	>
 		{#snippet header()}
@@ -228,6 +229,8 @@
 				</Button>
 			</div>
 		{/snippet}
+			
+		<!-- {/snippet} -->
 	</DataTable>
 </main>
 

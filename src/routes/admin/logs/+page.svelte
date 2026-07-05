@@ -149,7 +149,7 @@
 	</div>
 
 	<div class:opacity-50={navigating.complete} class:pointer-events-none={navigating.complete}>
-		<DataTable data={logs} onSearchFinished={updateSearch} selectable>
+		<DataTable data={logs} onSearchFinished={updateSearch} key={(log) => log.id} selectable>
 			{#snippet header()}
 				<Table.Head>ID</Table.Head>
 				<Table.Head>User</Table.Head>
