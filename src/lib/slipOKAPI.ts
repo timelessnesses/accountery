@@ -14,41 +14,41 @@ type BankInfoObject = {
 };
 
 type SlipOkResponseObject = {
-				// Valid QR code
-				success: boolean;
-				// Verification message
-				message: string;
-				receivingBank: string;
-				sendingBank: string;
-				transRef: string;
-				// yyyyMMdd
-				transDate: string;
-				// HH:mm:ss
-				transTime: string;
-				// Timestamp based from ISO 8601 format
-				transTimeStamp: string;
-				sender: BankInfoObject;
-				receiver: BankInfoObject;
-				amount: number;
-				paidLocalAmount: number;
-				paidLocalCurrency: string;
-				countryCode: string;
-				transFeeAmount: number;
-				ref1: string;
-				ref2: string;
-				ref3: string;
-				toMerchantId: string;
-			};
+	// Valid QR code
+	success: boolean;
+	// Verification message
+	message: string;
+	receivingBank: string;
+	sendingBank: string;
+	transRef: string;
+	// yyyyMMdd
+	transDate: string;
+	// HH:mm:ss
+	transTime: string;
+	// Timestamp based from ISO 8601 format
+	transTimeStamp: string;
+	sender: BankInfoObject;
+	receiver: BankInfoObject;
+	amount: number;
+	paidLocalAmount: number;
+	paidLocalCurrency: string;
+	countryCode: string;
+	transFeeAmount: number;
+	ref1: string;
+	ref2: string;
+	ref3: string;
+	toMerchantId: string;
+};
 
 export type SlipOkResponse =
 	| {
 			// Request Success
-		success: false;
-		data: SlipOkResponseObject;
+			success: false;
+			data: SlipOkResponseObject;
 	  }
 	| {
 			success: true;
-			data: SlipOkResponseObject
+			data: SlipOkResponseObject;
 	  };
 
 /**

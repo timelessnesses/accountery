@@ -26,37 +26,49 @@ export const load = async ({ platform, url }) => {
 
 	const ow = whereClause(startDate, endDate, search);
 
-	const logsQuery = (await accountingDatabase.prepare(
-		`
+	const logsQuery = (
+		await accountingDatabase
+			.prepare(
+				`
 		SELECT * FROM logs
 		${ow.whereClause}
 		ORDER BY timestamp DESC, id DESC
 		LIMIT 25 OFFSET ?
 		`
-	).bind(...ow.whereParams, offset * 25).all<Log>()).results.map((log) => ({
+			)
+			.bind(...ow.whereParams, offset * 25)
+			.all<Log>()
+	).results.map((log) => ({
 		...log,
 		date: unixTimestampToDate(log.timestamp)
 	})) as Log[];
 
-	const totalLogsCountQuery = await accountingDatabase.prepare(
-		`
+	const totalLogsCountQuery = await accountingDatabase
+		.prepare(
+			`
 		SELECT COUNT(*) as count FROM logs
 		${ow.whereClause}
 		`
-	).bind(...ow.whereParams).first<{ count: number }>();
+		)
+		.bind(...ow.whereParams)
+		.first<{ count: number }>();
 
 	const totalLogsCount = totalLogsCountQuery?.count || 0;
 
 	return {
 		logs: logsQuery,
-		totalLogsCount,
+		totalLogsCount
 	};
 };
 
-function whereClause(startDate: string | null, endDate: string | null, search: string | null): {
+function whereClause(
+	startDate: string | null,
+	endDate: string | null,
+	search: string | null
+): {
 	whereClause: string;
 	whereParams: (string | number)[];
-} { 
+} {
 	if (!startDate && !endDate && !search) return { whereClause: '', whereParams: [] };
 
 	let whereClause = '1=1 ';
@@ -69,7 +81,7 @@ function whereClause(startDate: string | null, endDate: string | null, search: s
 		whereClause += `AND timestamp <= ?`;
 		whereParams.push(endDate);
 	}
-	if (search) { 
+	if (search) {
 		whereClause += `AND (email LIKE ? OR action LIKE ? OR id LIKE ?)`;
 		whereParams.push(`%${search}%`, `%${search}%`, `%${search}%`);
 	}

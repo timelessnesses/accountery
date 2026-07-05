@@ -218,9 +218,7 @@
 		})
 			.then((r) => {
 				if (!r.ok) throw new Error('Failed to change student details');
-				alert(
-					`Changed ${userToChange?.name} (${userToChange?.email}) details successfully`
-				);
+				alert(`Changed ${userToChange?.name} (${userToChange?.email}) details successfully`);
 				closeNameDialog();
 				window.location.reload();
 			})
@@ -411,7 +409,6 @@
 			</Dialog.Description>
 
 			<div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-				
 				<label class="flex flex-col gap-1.5">
 					<span class="text-sm font-medium">Student Email</span>
 					<input
@@ -459,7 +456,10 @@
 					class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground
 						hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
 					onclick={confirmStudentChange}
-					disabled={(!studentEmailChangedTo.trim() && !studentNameChangedTo.trim() && !studentNicknameChangedTo.trim()) || importing}
+					disabled={(!studentEmailChangedTo.trim() &&
+						!studentNameChangedTo.trim() &&
+						!studentNicknameChangedTo.trim()) ||
+						importing}
 				>
 					{importing
 						? 'Changing…'
@@ -492,7 +492,10 @@
 			</Dialog.Description>
 
 			<div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
-				<label class="flex flex-col gap-1.5 sm:col-span-3 items-center text-center" for="sheetNumber">
+				<label
+					class="flex flex-col gap-1.5 sm:col-span-3 items-center text-center"
+					for="sheetNumber"
+				>
 					<span class="text-sm font-medium">Sheet Number</span>
 					<input
 						type="number"
