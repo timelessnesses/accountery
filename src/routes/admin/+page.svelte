@@ -128,13 +128,13 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 			};
 		}
 		const expectedRecipientThaiName =
-			slipOkResponse.data.receiver.displayName === PUBLIC_RECEPIENT_NAME_THAI;
+			slipOkResponse.data.receiver.displayName === env.PUBLIC_RECEPIENT_NAME_THAI;
 		const expectedRecipientEnglishName =
-			slipOkResponse.data.receiver.name === PUBLIC_RECEPIENT_NAME_ENG;
+			slipOkResponse.data.receiver.name === env.PUBLIC_RECEPIENT_NAME_ENG;
 		const expectedRecipientProxy =
-			slipOkResponse.data.receiver.proxy.type === PUBLIC_RECEPIENT_EXPECTED_PROXY;
+			slipOkResponse.data.receiver.proxy.type === env.PUBLIC_RECEPIENT_EXPECTED_PROXY;
 		const expectedRecipientProxyValueEnding = slipOkResponse.data.receiver.proxy.value.endsWith(
-			PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING
+			env.PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING
 		);
 		return {
 			expectedRecipientThaiName,
