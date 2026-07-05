@@ -43,7 +43,7 @@
 		return () => {
 			clearTimeout(timeout);
 		};
-	})
+	});
 
 	const filteredData = $derived.by(() => {
 		if (!search.trim() || searchKeys.length === 0) return data;

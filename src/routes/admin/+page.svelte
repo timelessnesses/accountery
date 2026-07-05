@@ -113,16 +113,14 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 		event.preventDefault();
 		toggleTransaction(transaction);
 	}
-	async function checkingSlipCondition(slipOkResponse: SlipOkResponse): Promise<
-		{
-			expectedRecipientThaiName: boolean;
-			expectedRecipientEnglishName: boolean;
-			expectedRecipientProxy: boolean;
-			expectedRecipientProxyValueEnding: boolean;
-			isMatchingSlip: boolean;
-			allChecksPassed: boolean;
-		}
-	> {
+	async function checkingSlipCondition(slipOkResponse: SlipOkResponse): Promise<{
+		expectedRecipientThaiName: boolean;
+		expectedRecipientEnglishName: boolean;
+		expectedRecipientProxy: boolean;
+		expectedRecipientProxyValueEnding: boolean;
+		isMatchingSlip: boolean;
+		allChecksPassed: boolean;
+	}> {
 		if (!slipOkResponse.data || !slipOkResponse.data.success) {
 			return {
 				expectedRecipientThaiName: false,
@@ -143,18 +141,15 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 			env.PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING
 		);
 
-
-
-		const res = await (await fetch(
-			`/admin/transactions/get-matching-slip`,
-			{
+		const res = (await (
+			await fetch(`/admin/transactions/get-matching-slip`, {
 				method: 'GET',
 				body: JSON.stringify({
 					transactionId: slipOkResponse.data.transRef,
 					bank: slipOkResponse.data.sendingBank
 				})
-			},
-		)).json() as {
+			})
+		).json()) as {
 			matchingSlipFound: boolean;
 		};
 		const isMatchingSlip = res.matchingSlipFound;
