@@ -44,7 +44,8 @@ export const load = async ({ platform }) => {
 
         GROUP BY u.email;
     `
-	).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
+    ).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
+    
 
 	return { transactionsFromUser };
 };

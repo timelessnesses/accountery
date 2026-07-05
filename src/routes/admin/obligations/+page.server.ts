@@ -2,7 +2,6 @@ import { unixTimestampToDate } from '$lib/date';
 import { buildAllocatedWeeks } from '$lib/paymentAlloc';
 import { toISODate, type AllocatedWeek } from '$lib/payments.svelte';
 import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabaseTypes';
-import { linkedUserAccountWithInfo } from '$lib/whitelisted.js';
 import { fail, redirect } from '@sveltejs/kit';
 
 type StudentWeek = {
@@ -69,10 +68,10 @@ export const load = async ({ platform }) => {
 	for (const user of users) {
 		const userTransactions = transactions.filter((transaction) => transaction.email === user.email);
 		const allocatedWeeks = buildAllocatedWeeks(obligations, userTransactions);
-		const info =
-			linkedUserAccountWithInfo[
-				user.email.split('@')[0] as unknown as keyof typeof linkedUserAccountWithInfo
-			];
+		const info = await accountingDatabase
+			.prepare('SELECT name, nickname FROM users WHERE email = ?')
+			.bind(user.email)
+			.first<{ name: string; nickname: string }>();
 
 		for (const allocatedWeek of allocatedWeeks) {
 			const week = weeksById.get(allocatedWeek.id);

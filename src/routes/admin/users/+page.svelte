@@ -6,7 +6,6 @@
 	import * as XLSX from 'xlsx';
 	import { Dialog } from 'bits-ui';
 	import Confirmation from '$lib/Confirmation.svelte';
-	import DropdownMenu from '$lib/components/ui/dropdown-menu/dropdown-menu.svelte';
 
 	const { data } = $props();
 
@@ -177,6 +176,10 @@
 				alert('Failed to delete all selected users');
 			});
 	}
+	let nameDialogOpen = $state(false);
+	function openNameDialog() {
+		nameDialogOpen = true;
+	}
 </script>
 
 <h1>Users</h1>
@@ -269,6 +272,12 @@
 					>
 						Delete User
 					</DropDownMenu.Item>
+					<DropDownMenu.Item
+						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+
+					>
+						
+					</DropDownMenu.Item>
 				</DropDownMenu.Content>
 			</DropDownMenu.Root>
 		{/snippet}
@@ -323,7 +332,115 @@
 	bind:this={fileInput}
 />
 
-<Dialog.Root open={ask} onOpenChange={(open) => !open && closeDialog()}>
+<Dialog.Root open={nameDialogOpen}>
+	<Dialog.Portal>
+		<Dialog.Overlay
+			class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm
+				data-[state=open]:animate-in data-[state=open]:fade-in
+				data-[state=closed]:animate-out data-[state=closed]:fade-out"
+		/>
+
+		<Dialog.Content
+			class="fixed left-1/2 top-1/2 z-50
+				w-[95vw] max-w-2xl
+				-translate-x-1/2 -translate-y-1/2
+				rounded-xl border bg-background p-6 shadow-xl
+				data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95
+				data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95"
+		>
+			<Dialog.Title class="text-lg font-semibold">Student Name</Dialog.Title>
+			<Dialog.Description class="mt-1 text-sm text-muted-foreground">
+				Tell us which column holds each field. Use a column letter (A, B, C…) or number (1, 2, 3…).
+			</Dialog.Description>
+
+			<div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<label class="flex flex-col gap-1.5">
+					<span class="text-sm font-medium">Student ID column</span>
+					<input
+						type="text"
+						bind:value={idColumn}
+						placeholder="e.g. A"
+						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
+							placeholder:text-muted-foreground
+							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+					/>
+				</label>
+
+				<label class="flex flex-col gap-1.5">
+					<span class="text-sm font-medium">Student name column</span>
+					<input
+						type="text"
+						bind:value={nameColumn}
+						placeholder="e.g. B"
+						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
+							placeholder:text-muted-foreground
+							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+					/>
+				</label>
+
+				<label class="flex flex-col gap-1.5">
+					<span class="text-sm font-medium">Student nickname column</span>
+					<input
+						type="text"
+						bind:value={nicknameColumn}
+						placeholder="e.g. C (optional)"
+						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
+							placeholder:text-muted-foreground
+							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+					/>
+				</label>
+			</div>
+
+			{#if idColumn.trim() && nameColumn.trim()}
+				<div class="mt-5">
+					<p class="mb-2 text-sm font-medium">
+						Preview — {previewStudents.length} student{previewStudents.length === 1 ? '' : 's'} found
+					</p>
+					<div class="max-h-64 overflow-y-auto rounded-md border">
+						<DataTable data={previewStudents.slice(0, 50)} selectable={false}>
+							{#snippet header()}
+								<Table.Head>Student ID</Table.Head>
+								<Table.Head>Name</Table.Head>
+								<Table.Head>Nickname</Table.Head>
+							{/snippet}
+							{#snippet row(student: StudentRow)}
+								<Table.Cell>{student.id}</Table.Cell>
+								<Table.Cell>{student.name}</Table.Cell>
+								<Table.Cell>{student.nickname || '—'}</Table.Cell>
+							{/snippet}
+						</DataTable>
+					</div>
+					{#if previewStudents.length > 50}
+						<p class="mt-1 text-xs text-muted-foreground">
+							Showing first 50 of {previewStudents.length} rows.
+						</p>
+					{/if}
+				</div>
+			{/if}
+
+			<div class="mt-6 flex justify-end gap-2">
+				<Dialog.Close
+					class="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted"
+					onclick={closeDialog}
+				>
+					Cancel
+				</Dialog.Close>
+				<button
+					class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground
+						hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+					disabled={previewStudents.length === 0 || importing}
+					onclick={confirmImport}
+				>
+					{importing
+						? 'Importing…'
+						: `Import ${previewStudents.length || ''} student${previewStudents.length === 1 ? '' : 's'}`}
+				</button>
+			</div>
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
+
+<Dialog.Root open={ask}>
 	<Dialog.Portal>
 		<Dialog.Overlay
 			class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm
