@@ -6,6 +6,7 @@
 	type Props = {
 		data: T[];
 		searchKeys?: (keyof T)[];
+		onSearchFinished?: (search: string) => void;
 		selectable?: boolean;
 
 		header: Snippet;
@@ -19,6 +20,7 @@
 	let {
 		data,
 		searchKeys = [],
+		onSearchFinished,
 		selectable = false,
 
 		header,
@@ -31,6 +33,17 @@
 	let search = $state('');
 	let selected = $state(new SvelteSet<T>());
 	let expanded = $state<T | undefined>();
+
+	$effect(() => {
+		const value = search;
+		const timeout = setTimeout(() => {
+			onSearchFinished?.(value);
+		}, 300);
+
+		return () => {
+			clearTimeout(timeout);
+		};
+	})
 
 	const filteredData = $derived.by(() => {
 		if (!search.trim() || searchKeys.length === 0) return data;
