@@ -236,6 +236,7 @@
 	<DataTable
 		data={data.transactionsFromUser.results}
 		searchKeys={['name', 'email']}
+		key={(user) => user.email}
 		selectable={true}
 	>
 		{#snippet header()}
@@ -549,7 +550,7 @@
 						Preview — {previewStudents.length} student{previewStudents.length === 1 ? '' : 's'} found
 					</p>
 					<div class="max-h-64 overflow-y-auto rounded-md border">
-						<DataTable data={previewStudents.slice(0, 50)} selectable={false}>
+						<DataTable data={previewStudents.slice(0, 50)} selectable={false} key={(student) => student.id}>
 							{#snippet header()}
 								<Table.Head>Student ID</Table.Head>
 								<Table.Head>Name</Table.Head>

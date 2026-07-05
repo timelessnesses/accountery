@@ -143,7 +143,7 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 
 		const res = (await (
 			await fetch(`/admin/transactions/get-matching-slip`, {
-				method: 'GET',
+				method: 'POST',
 				body: JSON.stringify({
 					transactionId: slipOkResponse.data.transRef,
 					bank: slipOkResponse.data.sendingBank

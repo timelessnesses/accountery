@@ -7,6 +7,7 @@
 		data: T[];
 		searchKeys?: (keyof T)[];
 		onSearchFinished?: (search: string) => void;
+		key: (item: T) => string | number;
 		selectable?: boolean;
 
 		header: Snippet;
@@ -22,6 +23,7 @@
 		searchKeys = [],
 		onSearchFinished,
 		selectable = false,
+		key,
 
 		header,
 		row,
@@ -31,8 +33,8 @@
 	}: Props = $props();
 
 	let search = $state('');
-	let selected = $state(new SvelteSet<T>());
-	let expanded = $state<T | undefined>();
+	let selected = new SvelteSet<ReturnType<typeof key>>();
+	let expanded = $state<ReturnType<typeof key> | undefined>();
 
 	$effect(() => {
 		const value = search;
@@ -60,10 +62,12 @@
 	});
 
 	function toggleRow(index: T) {
-		if (selected.has(index)) {
-			selected.delete(index);
+		const id = key(index);
+		if (!id) return;
+		if (selected.has(id)) {
+			selected.delete(id);
 		} else {
-			selected.add(index);
+			selected.add(id);
 		}
 
 		selected = new SvelteSet(selected);
@@ -71,8 +75,9 @@
 
 	function toggleExpanded(item: T) {
 		if (!detail) return;
-
-		expanded = expanded === item ? undefined : item;
+		const id = key(item);
+		if (!id) return;
+		expanded = expanded === id ? undefined : id;
 	}
 
 	const selectedItems = $derived(
@@ -109,18 +114,18 @@
 				</Table.Header>
 
 				<Table.Body>
-					{#each filteredData as item, index (index)}
+					{#each filteredData as item, index (key(item))}
 						<Table.Row
 							class={(index % 2 === 0 ? 'bg-background' : 'bg-muted/20') +
 								(detail ? ' cursor-pointer' : '')}
-							aria-expanded={detail ? expanded === item : undefined}
+							aria-expanded={detail ? expanded === key(item) : undefined}
 							onclick={() => toggleExpanded(item)}
 						>
 							{#if selectable}
 								<Table.Cell onclick={(event) => event.stopPropagation()}>
 									<input
 										type="checkbox"
-										checked={selected.has(item)}
+										checked={selected.has(key(item))}
 										onchange={() => toggleRow(item)}
 									/>
 								</Table.Cell>
@@ -134,7 +139,7 @@
 								</Table.Cell>
 							{/if}
 						</Table.Row>
-						{#if detail && expanded === item}
+						{#if detail && key(item) === expanded}
 							<Table.Row class="bg-muted/20">
 								<Table.Cell colspan={999} class="p-4">
 									{@render detail(item)}
