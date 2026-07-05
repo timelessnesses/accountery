@@ -73,14 +73,16 @@
 					expectedRecipientEnglishName,
 					expectedRecipientProxy,
 					expectedRecipientProxyValueEnding,
-					allChecksPassed
-				} = checkingSlipCondition(result);
+					allChecksPassed,
+					isMatchingSlip
+				} = await checkingSlipCondition(result);
 				message = `
 ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 - Expected Recipient Thai Name: ${expectedRecipientThaiName ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_NAME_THAI}, RECEIVED: ${result.data.receiver.displayName})
 - Expected Recipient English Name: ${expectedRecipientEnglishName ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_NAME_ENG}, RECEIVED: ${result.data.receiver.name})
 - Expected Recipient Proxy: ${expectedRecipientProxy ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_EXPECTED_PROXY}, RECEIVED: ${result.data.receiver.proxy.type})
 - Expected Recipient Proxy Value Ending: ${expectedRecipientProxyValueEnding ? '✅' : '❌'} (EXPECTED: ${env.PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING}, RECEIVED: ${result.data.receiver.proxy.value})
+- No slips found matching with this slip: ${!isMatchingSlip ? '✅' : '❌'}
 				`.trim();
 			} else {
 				message = 'Unable to verify this slip';
@@ -111,19 +113,23 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 		event.preventDefault();
 		toggleTransaction(transaction);
 	}
-	function checkingSlipCondition(slipOkResponse: SlipOkResponse): {
-		expectedRecipientThaiName: boolean;
-		expectedRecipientEnglishName: boolean;
-		expectedRecipientProxy: boolean;
-		expectedRecipientProxyValueEnding: boolean;
-		allChecksPassed: boolean;
-	} {
+	async function checkingSlipCondition(slipOkResponse: SlipOkResponse): Promise<
+		{
+			expectedRecipientThaiName: boolean;
+			expectedRecipientEnglishName: boolean;
+			expectedRecipientProxy: boolean;
+			expectedRecipientProxyValueEnding: boolean;
+			isMatchingSlip: boolean;
+			allChecksPassed: boolean;
+		}
+	> {
 		if (!slipOkResponse.data || !slipOkResponse.data.success) {
 			return {
 				expectedRecipientThaiName: false,
 				expectedRecipientEnglishName: false,
 				expectedRecipientProxy: false,
 				expectedRecipientProxyValueEnding: false,
+				isMatchingSlip: false,
 				allChecksPassed: false
 			};
 		}
@@ -136,16 +142,35 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 		const expectedRecipientProxyValueEnding = slipOkResponse.data.receiver.proxy.value.endsWith(
 			env.PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING
 		);
+
+
+
+		const res = await (await fetch(
+			`/admin/transactions/get-matching-slip`,
+			{
+				method: 'GET',
+				body: JSON.stringify({
+					transactionId: slipOkResponse.data.transRef,
+					bank: slipOkResponse.data.sendingBank
+				})
+			},
+		)).json() as {
+			matchingSlipFound: boolean;
+		};
+		const isMatchingSlip = res.matchingSlipFound;
+
 		return {
 			expectedRecipientThaiName,
 			expectedRecipientEnglishName,
 			expectedRecipientProxy,
 			expectedRecipientProxyValueEnding,
+			isMatchingSlip,
 			allChecksPassed:
 				expectedRecipientThaiName &&
 				expectedRecipientEnglishName &&
 				expectedRecipientProxy &&
-				expectedRecipientProxyValueEnding
+				expectedRecipientProxyValueEnding &&
+				isMatchingSlip
 		};
 	}
 </script>
