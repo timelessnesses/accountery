@@ -2,7 +2,6 @@
 	import PaymentCalendar from '$lib/PaymentCalendar.svelte';
 	import TransactionLog from '$lib/TransactionLog.svelte';
 	import { formatWeekRange, currency, type AllocatedWeek } from '$lib/payments.svelte';
-	import { linkedUserAccountWithInfo } from '$lib/whitelisted.js';
 
 	const { data } = $props();
 	if (!data) {
@@ -31,10 +30,7 @@
 		throw new Error('Required data not found');
 	}
 
-	const info =
-		linkedUserAccountWithInfo[
-			data.user?.email.split('@')[0] as unknown as keyof typeof linkedUserAccountWithInfo
-		] ?? {};
+	const info = data.user;
 	const totalPaid = $derived(
 		[...data.allTransactionsFromUser]
 			.filter((tx) => tx.approved === 'approved')

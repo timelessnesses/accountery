@@ -1,8 +1,8 @@
 import { env as envPrivate } from '$env/dynamic/private';
 import { env as envPublic } from '$env/dynamic/public';
-import { linkedUserAccountWithInfo } from '$lib/whitelisted';
 import { error } from '@sveltejs/kit';
 import { OAuth2Client } from 'google-auth-library';
+import { env } from 'process';
 
 export type GoogleJwtRequest = {
 	id_token: string;
@@ -37,7 +37,13 @@ export async function POST({ request, cookies, platform }) {
 	}
 
 	const studentID = payload.email.split('@')[0];
-	if (!Object.keys(linkedUserAccountWithInfo).find((key) => key === studentID)) {
+
+	const existsInWhitelist = await accountingDatabase
+		.prepare('SELECT * FROM users WHERE email = ?')
+		.bind(payload.email)
+		.all();
+	
+	if (existsInWhitelist.results.length === 0 && env.ADMIN_EMAIL !== payload.email) {
 		return new Response(JSON.stringify({ error: 'Student ID not whitelisted' }), { status: 400 });
 	}
 	/* await accountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
@@ -69,19 +75,12 @@ async function issuingNewSessionToken(studentEmail: string, database: D1Database
 	const sessionToken = randomString();
 	// 1 hour
 	const sessionTokenExpiry = Math.floor(Date.now() / 1000) + 3600;
-	const studentInfo =
-		linkedUserAccountWithInfo[parseInt(studentID) as keyof typeof linkedUserAccountWithInfo];
-	const studentName = studentInfo.name;
-	const studentNickname = studentInfo.nickname;
 	const stmt = await database
 		.prepare('SELECT * FROM users WHERE email = ?')
 		.bind(studentEmail)
 		.first();
 	if (!stmt) {
-		await database
-			.prepare('INSERT INTO users (name, email, nickname) VALUES (?, ?, ?)')
-			.bind(studentName, studentEmail, studentNickname)
-			.run();
+		throw error(400, `Student ID ${studentID} not found in the database.`);
 	}
 	await database
 		.prepare('UPDATE users SET session_token = ?, session_expiry = ? WHERE email = ?')
