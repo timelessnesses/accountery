@@ -1,3 +1,4 @@
+
 export const GET = async ({ request, platform, locals }) => { 
     if (!locals.user || !locals.user.admin) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });

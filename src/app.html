@@ -21,9 +21,11 @@
 					window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 				);
 			}
-			document.documentElement.classList.add(
-				localStorage.getItem('theme') === 'dark' ? 'dark' : ''
-			);
+			if (localStorage.getItem('theme') === 'dark') {
+				document.documentElement.classList.add('dark');
+			} else {
+				document.documentElement.classList.remove('dark');
+			}
 		</script>
 		%sveltekit.head%
 	</head>
