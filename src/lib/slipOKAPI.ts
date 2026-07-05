@@ -12,14 +12,8 @@ type BankInfoObject = {
 		value: string;
 	};
 };
-export type SlipOkResponse =
-	| {
-			// Request Success
-			success: false;
-	  }
-	| {
-			success: true;
-			data: {
+
+type SlipOkResponseObject = {
 				// Valid QR code
 				success: boolean;
 				// Verification message
@@ -45,6 +39,16 @@ export type SlipOkResponse =
 				ref3: string;
 				toMerchantId: string;
 			};
+
+export type SlipOkResponse =
+	| {
+			// Request Success
+		success: false;
+		data: SlipOkResponseObject;
+	  }
+	| {
+			success: true;
+			data: SlipOkResponseObject
 	  };
 
 /**
