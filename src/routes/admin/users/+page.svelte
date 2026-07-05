@@ -62,7 +62,7 @@
 			if (!result) return;
 
 			const workbook = XLSX.read(result, { type: 'array' });
-			const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+			const firstSheet = workbook.Sheets[workbook.SheetNames[sheetNumber - 1] || workbook.SheetNames[0]];
 			sheetRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
 
 			console.log(sheetRows);
@@ -70,6 +70,7 @@
 			idColumn = '';
 			nameColumn = '';
 			nicknameColumn = '';
+			sheetNumber = 1;
 			ask = true;
 		};
 		reader.readAsArrayBuffer(file);
@@ -177,9 +178,7 @@
 			});
 	}
 	let nameDialogOpen = $state(false);
-	function openNameDialog() {
-		nameDialogOpen = true;
-	}
+	let sheetNumber = $state(1);
 </script>
 
 <h1>Users</h1>
@@ -355,6 +354,16 @@
 
 			<div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
 				<label class="flex flex-col gap-1.5">
+					<span class="text-sm font-medium">Sheet Number</span>
+					<input
+						type="number"
+						bind:value={sheetNumber}
+						placeholder="e.g. 1"
+						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
+							placeholder:text-muted-foreground
+							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+					/>
+					<br>
 					<span class="text-sm font-medium">Student ID column</span>
 					<input
 						type="text"
