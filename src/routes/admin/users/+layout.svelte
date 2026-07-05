@@ -2,6 +2,6 @@
 	const { children } = $props();
 </script>
 
-<div class="h-screen flex flex-col">
+<div class="flex flex-col">
 	{@render children()}
 </div>
