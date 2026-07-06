@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { currency, type AllocatedWeek } from './payments.svelte';
 	import { lightbox } from './LightboxManager.svelte';
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 
 	// Replace this with your own payment QR image URL.
 	const QR_SRC = '/cropped-qr.jpg';
@@ -54,6 +55,11 @@
 			});
 
 			if (!response.ok) {
+				fetch(`/api/auth/verify-user`, { method: 'GET' }).then((res) => {
+					if (!res.ok) {
+						goto(resolve('/login'));
+					}
+				});
 				throw new Error('Payment save failed');
 			}
 

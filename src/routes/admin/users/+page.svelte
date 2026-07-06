@@ -6,19 +6,9 @@
 	import * as XLSX from 'xlsx';
 	import { Dialog } from 'bits-ui';
 	import Confirmation from '$lib/Confirmation.svelte';
+	import type { TransformedUser } from '$lib/types/AccountingDatabaseTypes.js';
 
 	const { data } = $props();
-
-	type TransformedUser = {
-		email: string;
-		name: string;
-		nickname: string;
-		paid: number;
-		owed: number;
-		net: number;
-		session_expiry: string;
-		session_token: string;
-	};
 
 	type StudentRow = {
 		id: string;
@@ -240,10 +230,10 @@
 		selectable={true}
 	>
 		{#snippet header()}
-			<Table.Head>Session Token</Table.Head>
 			<Table.Head>Name</Table.Head>
 			<Table.Head>Email</Table.Head>
 			<Table.Head>Nickname</Table.Head>
+			<Table.Head>Last Login Date</Table.Head>
 			<Table.Head>Session Expiration</Table.Head>
 			<Table.Head>Paid</Table.Head>
 			<Table.Head>Owed</Table.Head>
@@ -251,13 +241,13 @@
 		{/snippet}
 
 		{#snippet row(item)}
-			<Table.Cell>{item.session_token ? item.session_token.substring(0, 6) : 'None'}...</Table.Cell>
 			<Table.Cell>{item.name}</Table.Cell>
 			<Table.Cell>{item.email}</Table.Cell>
 			<Table.Cell>{item.nickname}</Table.Cell>
+			<Table.Cell>{item.logged_in_when ? item.logged_in_when.toLocaleString('en-TH', { timeZone: 'Asia/Bangkok' }) : 'None'}</Table.Cell>
 			<Table.Cell
 				>{item.session_expiry
-					? new Date(parseInt(item.session_expiry) * 1000).toLocaleString('en-TH', {
+					? item.session_expiry.toLocaleString('en-TH', {
 							timeZone: 'Asia/Bangkok'
 						})
 					: 'None'}</Table.Cell
@@ -279,7 +269,7 @@
 							window.open(`/admin/users/${user.email}`, '_blank');
 						}}>View Details</DropDownMenu.Item
 					>
-					<DropDownMenu.Item
+					<!-- <DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
 						onclick={() => {
 							fetch(`/admin/users/${user.email}/reset-session`, {
@@ -293,7 +283,7 @@
 									alert('Failed to reset session');
 								});
 						}}>Reset Session</DropDownMenu.Item
-					>
+					> -->
 					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
 						onclick={() => {
@@ -339,7 +329,7 @@
 		{/snippet}
 
 		{#snippet bulkActions(selected, disabled)}
-			<Button
+			<!-- <Button
 				{disabled}
 				onclick={() => {
 					const emails = selected.map((user: TransformedUser) => user.email);
@@ -361,7 +351,7 @@
 							alert('Failed to reset session for selected users');
 						});
 				}}>Reset {selected.length} Session Token{selected.length > 1 ? 's' : ''}</Button
-			>
+			> -->
 			<Button
 				{disabled}
 				onclick={() => {

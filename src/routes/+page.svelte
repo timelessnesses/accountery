@@ -50,6 +50,11 @@
 		try {
 			const response = await fetch('/api/auth/logout', { method: 'POST' });
 			if (!response.ok) {
+				fetch(`/api/auth/verify-user`, { method: 'GET' }).then((res) => {
+					if (!res.ok) {
+						goto(resolve('/login'));
+					}
+				});
 				throw new Error('Failed to log out');
 			}
 			accountMenuOpen = false;

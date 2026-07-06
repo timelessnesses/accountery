@@ -1,11 +1,11 @@
 
 export type User = {
-	session_token: string;
 	name: string;
 	email: string;
 	nickname: string;
-	session_expiry: Date;
+	session_expiry: Date | null;
 	role: 'user' | 'admin';
+	logged_in_when: Date | null;
 };
 
 export type Transaction = {
@@ -39,3 +39,9 @@ export type StudentJWT = {
 	nickname: string;
 	role: User["role"];
 }
+
+export type TransformedUser = {
+	paid: number;
+	owed: number;
+	net: number;
+} & User;

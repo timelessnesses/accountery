@@ -1,18 +1,7 @@
 import { unixTimestampToDate } from '$lib/date';
 import { buildAllocatedWeeks } from '$lib/paymentAlloc';
-import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabaseTypes';
+import type { Obligation, Transaction, TransformedUser, User } from '$lib/types/AccountingDatabaseTypes';
 import { error } from '@sveltejs/kit';
-
-type TransformedUser = {
-	email: string;
-	name: string;
-	nickname: string;
-	paid: number;
-	owed: number;
-	net: number;
-	session_expiry: string;
-	session_token: string;
-};
 
 export const load = async ({ params, platform, locals }) => {
 	if (!locals.user) {
@@ -41,7 +30,7 @@ export const load = async ({ params, platform, locals }) => {
             u.name,
             u.nickname,
             u.session_expiry,
-            u.session_token,
+			u.logged_in_when,
 
             COALESCE(
                 SUM(
@@ -78,6 +67,15 @@ export const load = async ({ params, platform, locals }) => {
 		)
 		.bind(params.user)
 		.first<TransformedUser>();
+	
+	if (netUser) {
+		if (netUser.logged_in_when) {
+			netUser.logged_in_when = new Date(parseInt(netUser.logged_in_when as unknown as string) * 1000);
+		}
+		if (netUser.session_expiry) {
+			netUser.session_expiry = new Date(parseInt(netUser.session_expiry as unknown as string) * 1000);
+		}
+	}
 
 	const allTransactionsFromUser = (
 		await accountingDatabase
