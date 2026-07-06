@@ -7,7 +7,28 @@ type StudentRow = {
 };
 
 export const POST = async ({ request, locals, platform }) => {
-	const body = (await request.json()) as { students: StudentRow[] };
+	const unfiltered = (await request.json()) as { students: StudentRow[] };
+
+	const body = {
+		students: (
+			await Promise.all(
+				unfiltered.students.map(async (student) => {
+					const existingStudent = await platform?.env.AccountingDatabase.prepare(
+						'SELECT * FROM users WHERE email = ?'
+					)
+						.bind(student.id)
+						.first();
+
+					if (existingStudent) {
+						console.warn(`Student with email ${student.id} already exists. Skipping.`);
+						return null;
+					}
+
+					return student;
+				})
+			)
+		).filter((v): v is StudentRow => !!v)
+	};
 
 	if (!locals.user || !locals.user.admin) {
 		return error(403, 'Forbidden');

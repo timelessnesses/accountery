@@ -229,7 +229,7 @@
 				</Button>
 			</div>
 		{/snippet}
-			
+
 		<!-- {/snippet} -->
 	</DataTable>
 </main>
