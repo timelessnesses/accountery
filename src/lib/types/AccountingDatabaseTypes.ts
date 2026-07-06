@@ -1,3 +1,4 @@
+
 export type User = {
 	session_token: string;
 	name: string;
@@ -32,3 +33,9 @@ export type Log = {
 	timestamp: number;
 	date: Date;
 };
+
+export type StudentJWT = {
+	name: string;
+	nickname: string;
+	role: User["role"];
+}
