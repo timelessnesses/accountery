@@ -1,3 +1,5 @@
+import type { TransformedUser } from '$lib/types/AccountingDatabaseTypes';
+
 export const load = async ({ platform }) => {
 	const transactionsFromUser = (await platform?.env.AccountingDatabase.prepare(
 		`
@@ -10,7 +12,7 @@ export const load = async ({ platform }) => {
             u.name,
             u.nickname,
             u.session_expiry,
-            u.session_token,
+            u.logged_in_when,
 
             COALESCE(
                 SUM(
@@ -44,18 +46,13 @@ export const load = async ({ platform }) => {
 
         GROUP BY u.email;
     `
-	).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
+    ).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
+    console.log(transactionsFromUser.results)
+    transactionsFromUser.results.forEach((u) => {
+        if (u.session_expiry) u.session_expiry = new Date(parseInt(u.session_expiry as unknown as string) * 1000);
+        if (u.logged_in_when) u.logged_in_when = new Date(parseInt(u.logged_in_when as unknown as string) * 1000);
+    });
 
 	return { transactionsFromUser };
 };
 
-type TransformedUser = {
-	email: string;
-	name: string;
-	nickname: string;
-	paid: number;
-	owed: number;
-	net: number;
-	session_expiry: string;
-	session_token: string;
-};

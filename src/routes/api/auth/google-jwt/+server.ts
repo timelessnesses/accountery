@@ -92,7 +92,22 @@ async function issuingNewSessionToken(studentEmail: string, database: D1Database
 		.setIssuedAt()
 		.setExpirationTime('1h')
 		.setSubject(studentEmail)
-		.sign(Uint8Array.fromBase64(await secret.get()));
+		.setProtectedHeader(
+			{
+				alg: 'HS256',
+				typ: 'JWT'
+			}
+		)
+		.sign(turnThisToUint8Array(await secret.get()));
+	
+	await database
+		.prepare('UPDATE users SET logged_in_when = ?, session_expiry = ? WHERE email = ?')
+		.bind(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000) + 3600, studentEmail)
+		.run();
 	return sessionToken;
 }
 
+function turnThisToUint8Array(secret: string): Uint8Array { 
+	const uint8Array = Uint8Array.from(atob(secret), (c) => c.charCodeAt(0));
+	return uint8Array;
+}
