@@ -62,15 +62,16 @@
 	});
 
 	function toggleRow(index: T) {
+		console.log('toggleRow called with index:', index, 'key:', key(index));
 		const id = key(index);
 		if (!id) return;
 		if (selected.has(id)) {
+			console.log('Removing id from selected:', id);
 			selected.delete(id);
 		} else {
+			console.log('Adding id to selected:', id);
 			selected.add(id);
 		}
-
-		selected = new SvelteSet(selected);
 	}
 
 	function toggleExpanded(item: T) {
@@ -82,9 +83,18 @@
 
 	const selectedItems = $derived(
 		Array.from(selected)
-			.map((index) => filteredData.find((item) => item === index))
+			.map((index) => filteredData.find((item) => key(item) === index))
 			.filter((item): item is T => item !== undefined)
 	);
+	let selectAll = $state(false);
+
+	$effect(() => {
+		if (selectAll) {
+			filteredData.forEach((item) => selected.add(key(item)));
+		} else {
+			selected.clear();
+		}
+	});
 </script>
 
 <div class="space-y-4" style="height: auto;">
@@ -102,9 +112,14 @@
 				<Table.Header>
 					<Table.Row>
 						{#if selectable}
-							<Table.Head class="w-10"></Table.Head>
+							<Table.Head class="w-10">
+								<input
+									type="checkbox"
+									bind:checked={selectAll}
+								/>
+							</Table.Head>
 						{/if}
-
+						
 						{@render header()}
 
 						{#if actions}

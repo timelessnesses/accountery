@@ -9,9 +9,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (token) {
 		try {
 			const user = await verifySessionToken(token, env);
-			console.log('User verified:', user.email, 'Admin:', user.admin);
 			if (user) {
-				console.log('Setting user:', user.email);
 				event.locals.user = user;
 			}
 		} catch (error) {
@@ -23,11 +21,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 	const path = event.url.pathname;
 	const isPublic = publicRoutes.some((r) => path.startsWith(r));
-	console.log('Checking if user is logged in:', event.locals.user, 'Public route:', isPublic);
 	if (!isPublic && !event.locals.user) {
-		console.log('Redirecting to login');
 		return redirect(302, '/login');
 	}
-	console.log('Resolving event');
 	return resolve(event);
 };
