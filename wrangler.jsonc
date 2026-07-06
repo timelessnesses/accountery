@@ -32,6 +32,13 @@
 			"binding": "AccountingReceipts"
 		}
 	],
+	"secrets_store_secrets": [
+		{
+			"binding": "SharedSecrets",
+			"store_id": "28edd17fa16c4dc4ad491c8e0a95d7b0",
+			"secret_name": "ACCOUNTERY_JWT_SECRET"
+		}
+	]
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

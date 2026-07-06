@@ -3,6 +3,8 @@ import { env as envPublic } from '$env/dynamic/public';
 import { error } from '@sveltejs/kit';
 import { OAuth2Client } from 'google-auth-library';
 import { env } from 'process';
+import * as jose from 'jose';
+import { type User } from '$lib/types/AccountingDatabaseTypes.js';
 
 export type GoogleJwtRequest = {
 	id_token: string;
@@ -51,7 +53,7 @@ export async function POST({ request, cookies, platform }) {
 		`User requested Google OAuth login with JWT. Student ID: ${studentID}. Giving new session token.`,
 		Math.floor(Date.now() / 1000)
 	).run(); */
-	const id = await issuingNewSessionToken(payload.email, accountingDatabase);
+	const id = await issuingNewSessionToken(payload.email, accountingDatabase, platform?.env.SharedSecrets as SecretsStoreSecret);
 	cookies.set('token', id, {
 		path: '/',
 		// httpOnly: true,
@@ -70,25 +72,27 @@ export async function POST({ request, cookies, platform }) {
 	return new Response(JSON.stringify({ success: true }), { status: 200 });
 }
 
-async function issuingNewSessionToken(studentEmail: string, database: D1Database) {
+async function issuingNewSessionToken(studentEmail: string, database: D1Database, secret: SecretsStoreSecret) {
 	const studentID = studentEmail.split('@')[0];
-	const sessionToken = randomString();
-	// 1 hour
-	const sessionTokenExpiry = Math.floor(Date.now() / 1000) + 3600;
 	const stmt = await database
 		.prepare('SELECT * FROM users WHERE email = ?')
 		.bind(studentEmail)
-		.first();
+		.first<User>();
 	if (!stmt) {
 		throw error(400, `Student ID ${studentID} not found in the database.`);
 	}
-	await database
-		.prepare('UPDATE users SET session_token = ?, session_expiry = ? WHERE email = ?')
-		.bind(sessionToken, sessionTokenExpiry, studentEmail)
-		.run();
+
+	if (! await secret.get()) {
+		throw error(500, 'Shared secret is not set in environment variables.');
+	}
+
+	const sessionToken = await new jose.SignJWT(
+		{ role: stmt.role, name: stmt.name, nickname: stmt.nickname }
+	)
+		.setIssuedAt()
+		.setExpirationTime('1h')
+		.setSubject(studentEmail)
+		.sign(Uint8Array.fromBase64(await secret.get()));
 	return sessionToken;
 }
 
-function randomString() {
-	return crypto.randomUUID();
-}
