@@ -14,5 +14,14 @@ export default defineConfig({
 	define: {
 		__GIT_COMMIT: JSON.stringify(gitCommit),
 		__BUILD_DATE: JSON.stringify(buildDate)
+	},
+	build: {
+		sourcemap: true,
+		chunkImportMap: true,
+		rolldownOptions: {
+			experimental: {
+				nativeMagicString: true
+			}
+		}
 	}
 });
