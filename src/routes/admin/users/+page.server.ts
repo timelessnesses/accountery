@@ -39,6 +39,7 @@ export const load = async ({ platform }) => {
             ) - obligation_total.owed AS net
 
         FROM users u
+        WHERE u.deleted_at IS NULL
         LEFT JOIN transactions t
             ON t.email = u.email
 
