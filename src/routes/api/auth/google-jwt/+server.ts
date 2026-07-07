@@ -41,7 +41,7 @@ export async function POST({ request, cookies, platform }) {
 	const studentID = payload.email.split('@')[0];
 
 	const existsInWhitelist = await accountingDatabase
-		.prepare('SELECT * FROM users WHERE email = ?')
+		.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL')
 		.bind(payload.email)
 		.all();
 
@@ -75,7 +75,7 @@ export async function POST({ request, cookies, platform }) {
 async function issuingNewSessionToken(studentEmail: string, database: D1Database, secret: SecretsStoreSecret) {
 	const studentID = studentEmail.split('@')[0];
 	const stmt = await database
-		.prepare('SELECT * FROM users WHERE email = ?')
+		.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL')
 		.bind(studentEmail)
 		.first<User>();
 	if (!stmt) {

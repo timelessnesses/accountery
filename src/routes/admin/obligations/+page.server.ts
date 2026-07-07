@@ -25,8 +25,13 @@ type ObligationWeek = AllocatedWeek & {
 export const load = async ({ platform }) => {
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
 
-	const users = (await accountingDatabase.prepare('SELECT * FROM users ORDER BY email').all<User>())
-		.results;
+	const users = (await accountingDatabase.prepare('SELECT * FROM users WHERE deleted_at IS NULL ORDER BY email').all<User>())
+		.results.map((user) => ({
+			...user,
+			session_expiry: user.session_expiry ? new Date(user.session_expiry) : null,
+			logged_in_when: user.logged_in_when ? new Date(user.logged_in_when) : null,
+			deleted_at: user.deleted_at ? new Date(user.deleted_at) : null
+		})) as User[];
 
 	const obligations = (
 		await accountingDatabase
@@ -34,7 +39,7 @@ export const load = async ({ platform }) => {
 			.all<Obligation>()
 	).results.map((obligation) => ({
 		...obligation,
-		start_date: new Date(Number(obligation.start_date) * 1000)
+		start_date: new Date(Number(obligation.start_date) * 1000),
 	})) as Obligation[];
 
 	const transactions = (
@@ -69,7 +74,7 @@ export const load = async ({ platform }) => {
 		const userTransactions = transactions.filter((transaction) => transaction.email === user.email);
 		const allocatedWeeks = buildAllocatedWeeks(obligations, userTransactions);
 		const info = await accountingDatabase
-			.prepare('SELECT name, nickname FROM users WHERE email = ?')
+			.prepare('SELECT name, nickname FROM users WHERE email = ? AND deleted_at IS NULL')
 			.bind(user.email)
 			.first<{ name: string; nickname: string }>();
 

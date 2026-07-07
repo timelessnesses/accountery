@@ -14,7 +14,7 @@ export const POST = async ({ request, locals, platform }) => {
 			await Promise.all(
 				unfiltered.students.map(async (student) => {
 					const existingStudent = await platform?.env.AccountingDatabase.prepare(
-						'SELECT * FROM users WHERE email = ?'
+						'SELECT * FROM users WHERE email = ? AND deleted_at IS NULL'
 					)
 						.bind(student.id)
 						.first();

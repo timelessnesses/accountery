@@ -31,8 +31,21 @@ export const POST = async ({ params, platform, locals }) => {
 			)
 			.run();
 		return json({ ok: true });
-	} catch (e) {
-		console.error('Error deleting user:', e);
-		return json({ error: 'Error deleting user' }, { status: 500 });
+	} catch {
+		await env?.AccountingDatabase.prepare(
+			`UPDATE users SET deleted_at = ? WHERE email = ?`
+		)
+			.bind(Math.floor(Date.now() / 1000), userEmail)
+			.run();
+		await env?.AccountingDatabase.prepare(
+			'INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)'
+		)
+			.bind(
+				locals.user.email,
+				`Admin ${locals.user.email} marked user with email: ${userEmail} as deleted`,
+				Math.floor(Date.now() / 1000)
+			)
+			.run();
+		return json({ ok: true });
 	}
 };

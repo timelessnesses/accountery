@@ -13,7 +13,7 @@ export const load = async ({ params, platform, locals }) => {
 			`
         SELECT *
         FROM users
-        WHERE email = ?
+        WHERE email = ? AND deleted_at IS NULL
     `
 		)
 		.bind(params.user)
@@ -57,6 +57,7 @@ export const load = async ({ params, platform, locals }) => {
             ) - obligation_total.owed AS net
 
         FROM users u
+		WHERE u.deleted_at IS NULL
         LEFT JOIN transactions t
             ON t.email = u.email
 
