@@ -1,4 +1,3 @@
-
 export type User = {
 	name: string;
 	email: string;
@@ -38,8 +37,8 @@ export type Log = {
 export type StudentJWT = {
 	name: string;
 	nickname: string;
-	role: User["role"];
-}
+	role: User['role'];
+};
 
 export type TransformedUser = {
 	paid: number;

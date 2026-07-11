@@ -53,7 +53,11 @@ export async function POST({ request, cookies, platform }) {
 		`User requested Google OAuth login with JWT. Student ID: ${studentID}. Giving new session token.`,
 		Math.floor(Date.now() / 1000)
 	).run(); */
-	const id = await issuingNewSessionToken(payload.email, accountingDatabase, platform?.env.SharedSecrets as SecretsStoreSecret);
+	const id = await issuingNewSessionToken(
+		payload.email,
+		accountingDatabase,
+		platform?.env.SharedSecrets as SecretsStoreSecret
+	);
 	cookies.set('token', id, {
 		path: '/',
 		// httpOnly: true,
@@ -72,7 +76,11 @@ export async function POST({ request, cookies, platform }) {
 	return new Response(JSON.stringify({ success: true }), { status: 200 });
 }
 
-async function issuingNewSessionToken(studentEmail: string, database: D1Database, secret: SecretsStoreSecret) {
+async function issuingNewSessionToken(
+	studentEmail: string,
+	database: D1Database,
+	secret: SecretsStoreSecret
+) {
 	const studentID = studentEmail.split('@')[0];
 	const stmt = await database
 		.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL')
@@ -82,24 +90,24 @@ async function issuingNewSessionToken(studentEmail: string, database: D1Database
 		throw error(400, `Student ID ${studentID} not found in the database.`);
 	}
 
-	if (! await secret.get()) {
+	if (!(await secret.get())) {
 		throw error(500, 'Shared secret is not set in environment variables.');
 	}
 
-	const sessionToken = await new jose.SignJWT(
-		{ role: stmt.role, name: stmt.name, nickname: stmt.nickname }
-	)
+	const sessionToken = await new jose.SignJWT({
+		role: stmt.role,
+		name: stmt.name,
+		nickname: stmt.nickname
+	})
 		.setIssuedAt()
 		.setExpirationTime('1h')
 		.setSubject(studentEmail)
-		.setProtectedHeader(
-			{
-				alg: 'HS256',
-				typ: 'JWT'
-			}
-		)
+		.setProtectedHeader({
+			alg: 'HS256',
+			typ: 'JWT'
+		})
 		.sign(turnThisToUint8Array(await secret.get()));
-	
+
 	await database
 		.prepare('UPDATE users SET logged_in_when = ?, session_expiry = ? WHERE email = ?')
 		.bind(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000) + 3600, studentEmail)
@@ -107,7 +115,7 @@ async function issuingNewSessionToken(studentEmail: string, database: D1Database
 	return sessionToken;
 }
 
-function turnThisToUint8Array(secret: string): Uint8Array { 
+function turnThisToUint8Array(secret: string): Uint8Array {
 	const uint8Array = Uint8Array.from(atob(secret), (c) => c.charCodeAt(0));
 	return uint8Array;
 }

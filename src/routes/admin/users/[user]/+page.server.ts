@@ -1,6 +1,11 @@
 import { unixTimestampToDate } from '$lib/date';
 import { buildAllocatedWeeks } from '$lib/paymentAlloc';
-import type { Obligation, Transaction, TransformedUser, User } from '$lib/types/AccountingDatabaseTypes';
+import type {
+	Obligation,
+	Transaction,
+	TransformedUser,
+	User
+} from '$lib/types/AccountingDatabaseTypes';
 import { error } from '@sveltejs/kit';
 
 export const load = async ({ params, platform, locals }) => {
@@ -67,13 +72,17 @@ export const load = async ({ params, platform, locals }) => {
 		)
 		.bind(params.user)
 		.first<TransformedUser>();
-	
+
 	if (netUser) {
 		if (netUser.logged_in_when) {
-			netUser.logged_in_when = new Date(parseInt(netUser.logged_in_when as unknown as string) * 1000);
+			netUser.logged_in_when = new Date(
+				parseInt(netUser.logged_in_when as unknown as string) * 1000
+			);
 		}
 		if (netUser.session_expiry) {
-			netUser.session_expiry = new Date(parseInt(netUser.session_expiry as unknown as string) * 1000);
+			netUser.session_expiry = new Date(
+				parseInt(netUser.session_expiry as unknown as string) * 1000
+			);
 		}
 	}
 

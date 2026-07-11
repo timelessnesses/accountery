@@ -244,7 +244,11 @@
 			<Table.Cell>{item.name}</Table.Cell>
 			<Table.Cell>{item.email}</Table.Cell>
 			<Table.Cell>{item.nickname}</Table.Cell>
-			<Table.Cell>{item.logged_in_when ? item.logged_in_when.toLocaleString('en-TH', { timeZone: 'Asia/Bangkok' }) : 'None'}</Table.Cell>
+			<Table.Cell
+				>{item.logged_in_when
+					? item.logged_in_when.toLocaleString('en-TH', { timeZone: 'Asia/Bangkok' })
+					: 'None'}</Table.Cell
+			>
 			<Table.Cell
 				>{item.session_expiry
 					? item.session_expiry.toLocaleString('en-TH', {
