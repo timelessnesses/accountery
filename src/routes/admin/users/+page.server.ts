@@ -39,12 +39,11 @@ export const load = async ({ platform }) => {
             ) - obligation_total.owed AS net
 
         FROM users u
-        WHERE u.deleted_at IS NULL
         LEFT JOIN transactions t
             ON t.email = u.email
 
         CROSS JOIN obligation_total
-
+        WHERE u.deleted_at IS NULL
         GROUP BY u.email;
     `
     ).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
