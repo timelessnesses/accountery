@@ -57,12 +57,11 @@ export const load = async ({ params, platform, locals }) => {
             ) - obligation_total.owed AS net
 
         FROM users u
-		WHERE u.deleted_at IS NULL
         LEFT JOIN transactions t
             ON t.email = u.email
 
         CROSS JOIN obligation_total
-        WHERE u.email = ?
+        WHERE u.email = ? AND u.deleted_at IS NULL
         GROUP BY u.email;
     `
 		)
