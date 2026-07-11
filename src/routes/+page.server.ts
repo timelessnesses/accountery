@@ -7,7 +7,10 @@ import { env as envPublic } from '$env/dynamic/public';
 import { checkIfUserExists } from './api/auth/verify-user/checkUserExist.js';
 
 export const load = async ({ locals, platform }) => {
-	if (!locals.user || !(await checkIfUserExists(locals.user.email, platform?.env.AccountingDatabase as D1Database))) {
+	if (
+		!locals.user ||
+		!(await checkIfUserExists(locals.user.email, platform?.env.AccountingDatabase as D1Database))
+	) {
 		return redirect(302, '/login');
 	}
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;

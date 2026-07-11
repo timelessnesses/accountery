@@ -38,6 +38,22 @@
 			"store_id": "28edd17fa16c4dc4ad491c8e0a95d7b0",
 			"secret_name": "ACCOUNTERY_JWT_SECRET"
 		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "DurableDatabase",
+				"class_name": "DODatabase",
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"DODatabase"
+			]
+		}
 	]
 	/**
 	 * Smart Placement

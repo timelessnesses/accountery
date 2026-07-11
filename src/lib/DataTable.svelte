@@ -113,13 +113,10 @@
 					<Table.Row>
 						{#if selectable}
 							<Table.Head class="w-10">
-								<input
-									type="checkbox"
-									bind:checked={selectAll}
-								/>
+								<input type="checkbox" bind:checked={selectAll} />
 							</Table.Head>
 						{/if}
-						
+
 						{@render header()}
 
 						{#if actions}

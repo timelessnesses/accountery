@@ -1,6 +1,6 @@
 import { type StudentJWT } from './types/AccountingDatabaseTypes';
 import * as jose from 'jose';
-import { env as envPrivate } from "$env/dynamic/private";
+import { env as envPrivate } from '$env/dynamic/private';
 
 export async function verifySessionToken(
 	token: string,
@@ -11,7 +11,7 @@ export async function verifySessionToken(
 	if (!secretValue) {
 		throw new Error('Shared secret is not set in environment variables.');
 	}
-	
+
 	const { payload } = await jose.jwtVerify<StudentJWT>(token, turnThisToUint8Array(secretValue), {
 		algorithms: ['HS256']
 	});
@@ -23,7 +23,7 @@ export async function verifySessionToken(
 	if (!payload) {
 		throw new Error('Invalid JWT token.');
 	}
-	
+
 	return {
 		email: payload.sub as string,
 		name: payload.name,
@@ -31,7 +31,7 @@ export async function verifySessionToken(
 		admin: payload.role === 'admin'
 	};
 }
-function turnThisToUint8Array(secret: string): Uint8Array { 
+function turnThisToUint8Array(secret: string): Uint8Array {
 	const uint8Array = Uint8Array.from(atob(secret), (c) => c.charCodeAt(0));
 	return uint8Array;
 }

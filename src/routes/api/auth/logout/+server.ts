@@ -1,16 +1,12 @@
 export async function POST({ cookies, platform, locals }) {
-	await platform?.env.AccountingDatabase
-		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
-		.bind(
-			locals.user?.email,
-			`User logged out.`,
-			Math.floor(Date.now() / 1000)
-		)
+	await platform?.env.AccountingDatabase.prepare(
+		'INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)'
+	)
+		.bind(locals.user?.email, `User logged out.`, Math.floor(Date.now() / 1000))
 		.run();
-	
-	await platform?.env.AccountingDatabase
-		.prepare("UPDATE users")
-	
+
+	await platform?.env.AccountingDatabase.prepare('UPDATE users');
+
 	cookies.set('token', '', {
 		path: '/',
 		sameSite: 'strict',

@@ -46,13 +46,14 @@ export const load = async ({ platform }) => {
         WHERE u.deleted_at IS NULL
         GROUP BY u.email;
     `
-    ).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
-    console.log(transactionsFromUser.results)
-    transactionsFromUser.results.forEach((u) => {
-        if (u.session_expiry) u.session_expiry = new Date(parseInt(u.session_expiry as unknown as string) * 1000);
-        if (u.logged_in_when) u.logged_in_when = new Date(parseInt(u.logged_in_when as unknown as string) * 1000);
-    });
+	).all<TransformedUser>()) as unknown as D1Result<TransformedUser>;
+	console.log(transactionsFromUser.results);
+	transactionsFromUser.results.forEach((u) => {
+		if (u.session_expiry)
+			u.session_expiry = new Date(parseInt(u.session_expiry as unknown as string) * 1000);
+		if (u.logged_in_when)
+			u.logged_in_when = new Date(parseInt(u.logged_in_when as unknown as string) * 1000);
+	});
 
 	return { transactionsFromUser };
 };
-
