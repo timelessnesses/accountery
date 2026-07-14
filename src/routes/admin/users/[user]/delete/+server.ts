@@ -32,9 +32,7 @@ export const POST = async ({ params, platform, locals }) => {
 			.run();
 		return json({ ok: true });
 	} catch {
-		await env?.AccountingDatabase.prepare(
-			`UPDATE users SET deleted_at = ? WHERE email = ?`
-		)
+		await env?.AccountingDatabase.prepare(`UPDATE users SET deleted_at = ? WHERE email = ?`)
 			.bind(Math.floor(Date.now() / 1000), userEmail)
 			.run();
 		await env?.AccountingDatabase.prepare(

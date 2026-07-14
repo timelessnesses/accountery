@@ -45,6 +45,7 @@ PUBLIC_RECEPIENT_NAME_ENG=
 PUBLIC_RECEPIENT_NAME_THAI=
 SLIP_OK_API_ENDPOINT=
 SLIP_OK_API_KEY=
+AUTHENTICATION_METHOD=
 ```
 
 - `GOOGLE_OAUTH_CLIENT_SECRET`: Google OAuth client secret (Required)
@@ -57,6 +58,7 @@ SLIP_OK_API_KEY=
 - `PUBLIC_RECEPIENT_NAME_THAI`: The expected recipient name in Thai (Required if SLIP_OK_API_ENDPOINT and SLIP_OK_API_KEY are set)
 - `SLIP_OK_API_ENDPOINT`: The URL of the SlipOK API endpoint (Optional)
 - `SLIP_OK_API_KEY`: The API key for the SlipOK API (Optional)
+- `AUTHENTICATION_METHOD`: How server would identify user logging in using either JSON Web Token (JWT) or session token (SESSION). Trade off is for JWT you can't revoke the key, and role reflection will not be updated until next login, for SESSION it's extra database hops but you can revoke the key and role reflection will be updated immediately. Default is JWT.
 
 ### Login as Student setup
 
