@@ -2,7 +2,7 @@ import { type StudentJWT } from './types/AccountingDatabaseTypes';
 import * as jose from 'jose';
 import { env as envPrivate } from '$env/dynamic/private';
 
-export async function verifySessionToken(
+export async function verifyJWT(
 	token: string,
 	env: Env
 ): Promise<{ email: string; name: string; nickname: string; admin: boolean }> {
