@@ -1,5 +1,6 @@
 <script lang="ts">
 	import PaymentCalendar from '$lib/PaymentCalendar.svelte';
+	import CalendarSync from '$lib/CalendarSync.svelte';
 	import PaymentForm from '$lib/PaymentForm.svelte';
 	import TransactionLog from '$lib/TransactionLog.svelte';
 	import Lightbox from '$lib/Lightbox.svelte';
@@ -430,6 +431,7 @@
 					</div>
 				{/each}
 			</div>
+			<div class="mb-3 px-1"><CalendarSync /></div>
 			<div class="min-h-0 flex-1">
 				<PaymentCalendar weeks={data.allocatedWeeks} onselect={handleSelect} />
 			</div>
@@ -445,7 +447,7 @@
 				{@const meta = statusMeta[selectedWeek.status]}
 				<div class="mb-4 rounded-xl border border-border bg-card p-4">
 					<div class="flex items-center justify-between">
-						<p class="text-xs font-medium text-muted-foreground">Selected week</p>
+						<p class="text-xs font-medium text-muted-foreground">Selected obligation</p>
 						<button
 							onclick={() => (selectedWeek = undefined)}
 							class="text-xs text-muted-foreground hover:text-foreground"
@@ -453,7 +455,7 @@
 						>
 					</div>
 					<p class="mt-1 text-sm font-semibold text-card-foreground">
-						{formatWeekRange(selectedWeek.weekStart)}
+						{formatWeekRange(selectedWeek.dayStart, selectedWeek.dayEnd)}
 					</p>
 					<div class="mt-3 flex items-center gap-2">
 						<span class="h-2 w-2 rounded-full {meta.dot}"></span>

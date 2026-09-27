@@ -7,7 +7,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const env = event.platform?.env as Env;
 	const token = event.cookies.get('token');
 	if (token) {
-		if (env.AUTHENTICATION_METHOD === 'JWT') { 
+		if (env.AUTHENTICATION_METHOD === 'JWT') {
 			try {
 				const user = await verifyJWT(token, env);
 				if (user) {
@@ -22,7 +22,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 	const path = event.url.pathname;
-	const isPublic = publicRoutes.some((r) => path.startsWith(r));
+	const isCalendarFeed =
+		/^\/api\/calendar\/[a-f0-9]{64}$/.test(path) &&
+		(event.request.method === 'GET' || event.request.method === 'HEAD');
+	const isPublic = isCalendarFeed || publicRoutes.some((r) => path.startsWith(r));
 	if (!isPublic && !event.locals.user) {
 		return redirect(302, '/login');
 	}

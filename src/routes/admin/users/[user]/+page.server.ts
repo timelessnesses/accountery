@@ -1,4 +1,4 @@
-import { unixTimestampToDate } from '$lib/date';
+import { obligationDates, unixTimestampToDate } from '$lib/date';
 import { buildAllocatedWeeks } from '$lib/paymentAlloc';
 import type {
 	Obligation,
@@ -98,7 +98,7 @@ export const load = async ({ params, platform, locals }) => {
 	).results // o.start_date is a number
 		.map((o) => ({
 			...o,
-			start_date: new Date(parseInt(o.start_date as unknown as string) * 1000)
+			...obligationDates(o)
 		}));
 
 	if (!user || !netUser) {

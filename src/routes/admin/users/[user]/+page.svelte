@@ -65,10 +65,10 @@
 		{#if selectedWeek}
 			{@const meta = statusMeta[selectedWeek.status]}
 
-			<p class="text-xs text-muted-foreground">Selected week</p>
+			<p class="text-xs text-muted-foreground">Selected obligation</p>
 
 			<p class="mt-1 font-semibold">
-				{formatWeekRange(selectedWeek.weekStart)}
+				{formatWeekRange(selectedWeek.dayStart, selectedWeek.dayEnd)}
 			</p>
 
 			<div class="mt-3 flex items-center gap-2">
