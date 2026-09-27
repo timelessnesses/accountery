@@ -1,0 +1,7 @@
+-- Migration number: 0013 	 2026-09-12T02:30:20.928Z
+CREATE TABLE calendar_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL,
+    by_user TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE
+)
