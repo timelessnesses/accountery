@@ -9,7 +9,7 @@
 		$props();
 
 	let el: HTMLDivElement;
-	let calendar: Calendar | undefined;
+	let calendar = $state.raw<Calendar>();
 
 	const STATUS_CLASS: Record<AllocatedWeek['status'], string> = {
 		paid: 'week-paid',
@@ -28,8 +28,9 @@
 	function buildEvents(list: AllocatedWeek[]) {
 		return list.map((w) => ({
 			id: w.id,
-			start: w.weekStart,
-			end: addDays(w.weekStart, 7),
+			start: w.dayStart,
+			// FullCalendar uses an exclusive end for all-day events.
+			end: addDays(w.dayEnd, 1),
 			allDay: true,
 			title:
 				w.status === 'paid'
@@ -46,15 +47,12 @@
 		}));
 	}
 
-	// Map each calendar day -> status class for coloring the whole week strip.
-	function dayClasses(list: AllocatedWeek[]) {
-		const map = new Map<string, string>();
-		for (const w of list) {
-			for (let i = 0; i < 7; i++) {
-				map.set(addDays(w.weekStart, i), STATUS_CLASS[w.status]);
-			}
-		}
-		return map;
+	// For overlapping ranges, show the most urgent payment status on the day.
+	function dayClass(list: AllocatedWeek[], iso: string) {
+		const priority = { paid: 0, waiting_approval: 1, partial: 2, unpaid: 3 };
+		const matching = list.filter((w) => w.dayStart <= iso && iso <= w.dayEnd);
+		matching.sort((a, b) => priority[b.status] - priority[a.status]);
+		return matching.length ? [STATUS_CLASS[matching[0].status]] : [];
 	}
 
 	onMount(() => {
@@ -72,8 +70,7 @@
 			events: buildEvents(weeks),
 			dayCellClassNames: (arg) => {
 				const iso = toISODate(arg.date);
-				const cls = dayClasses(weeks).get(iso);
-				return cls ? [cls] : [];
+				return dayClass(weeks, iso);
 			},
 			eventClick: (info) => {
 				const week = info.event.extendedProps.week as AllocatedWeek;
@@ -89,12 +86,10 @@
 		if (!calendar) return;
 		// touch weeks for reactivity
 		const list = weeks;
-		calendar.removeAllEvents();
-		calendar.addEventSource(buildEvents(list));
-		calendar.setOption('dayCellClassNames', (arg) => {
-			const iso = toISODate(arg.date);
-			const cls = dayClasses(list).get(iso);
-			return cls ? [cls] : [];
+		calendar.batchRendering(() => {
+			calendar!.getEventSources().forEach((source) => source.remove());
+			calendar!.addEventSource(buildEvents(list));
+			calendar!.setOption('dayCellClassNames', (arg) => dayClass(list, toISODate(arg.date)));
 		});
 	});
 

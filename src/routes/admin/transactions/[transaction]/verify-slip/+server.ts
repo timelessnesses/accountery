@@ -38,7 +38,7 @@ export const POST = async ({ locals, params, platform }) => {
 	console.log('Slip object retrieved from R2:', slipObject);
 
 	const result = await checkSlipOkCacheBeforeCallingSlipOkApi(
-		platform?.env.AccountingDatabase,
+		platform?.env.AccountingDatabase as D1Database,
 		transaction.id,
 		slipObject,
 		transaction.amount,

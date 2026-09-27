@@ -1,6 +1,6 @@
-import { unixTimestampToDate } from '$lib/date';
+import { obligationDates, parseDateInput, unixTimestampToDate } from '$lib/date';
 import { buildAllocatedWeeks } from '$lib/paymentAlloc';
-import { toISODate, type AllocatedWeek } from '$lib/payments.svelte';
+import type { AllocatedWeek } from '$lib/payments.svelte';
 import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabaseTypes';
 import { fail, redirect } from '@sveltejs/kit';
 
@@ -42,7 +42,7 @@ export const load = async ({ platform }) => {
 			.all<Obligation>()
 	).results.map((obligation) => ({
 		...obligation,
-		start_date: new Date(Number(obligation.start_date) * 1000)
+		...obligationDates(obligation)
 	})) as Obligation[];
 
 	const transactions = (
@@ -58,7 +58,8 @@ export const load = async ({ platform }) => {
 		const id = obligation.id.toString();
 		weeksById.set(id, {
 			id,
-			weekStart: toISODate(obligation.start_date),
+			dayStart: obligation.start_date.toISOString().slice(0, 10),
+			dayEnd: obligationDates(obligation).end_date.toISOString().slice(0, 10),
 			label: obligation.description,
 			cost: obligation.amount,
 			amount: obligation.amount,
@@ -153,11 +154,11 @@ export const actions = {
 		await accountingDatabase
 			.prepare(
 				`
-                INSERT INTO obligations (start_date, amount, description)
-                VALUES (?, ?, ?)
+                INSERT INTO obligations (start_date, end_date, amount, description)
+                VALUES (?, ?, ?, ?)
             `
 			)
-			.bind(values.startDate, values.amount, values.description)
+			.bind(values.startDate, values.endDate, values.amount, values.description)
 			.run();
 
 		throw redirect(303, '/admin/obligations');
@@ -181,12 +182,13 @@ export const actions = {
 				`
                 UPDATE obligations
                 SET start_date = ?,
+                    end_date = ?,
                     amount = ?,
                     description = ?
                 WHERE id = ?
             `
 			)
-			.bind(values.startDate, values.amount, values.description, id)
+			.bind(values.startDate, values.endDate, values.amount, values.description, id)
 			.run();
 
 		throw redirect(303, '/admin/obligations');
@@ -199,12 +201,22 @@ async function readObligationForm(request: Request) {
 
 function parseObligationValues(form: FormData) {
 	const startDateValue = String(form.get('start_date') ?? '');
+	const endDateValue = String(form.get('end_date') ?? '');
 	const amount = Number(form.get('amount'));
 	const description = String(form.get('description') ?? '').trim();
-	const startDate = Math.floor(new Date(`${startDateValue}T00:00:00`).getTime() / 1000);
+	const startDate = parseDateInput(startDateValue);
+	const endDate = parseDateInput(endDateValue);
 
-	if (!startDateValue || !Number.isFinite(startDate)) {
-		return { ok: false, message: 'Start date is required' } as const;
+	if (startDate === null) {
+		return { ok: false, message: 'A valid start date is required' } as const;
+	}
+
+	if (endDate === null) {
+		return { ok: false, message: 'A valid end date is required' } as const;
+	}
+
+	if (endDate < startDate) {
+		return { ok: false, message: 'End date must be on or after start date' } as const;
 	}
 
 	if (!Number.isFinite(amount) || amount <= 0) {
@@ -218,6 +230,7 @@ function parseObligationValues(form: FormData) {
 	return {
 		ok: true,
 		startDate,
+		endDate,
 		amount: Math.round(amount),
 		description
 	} as const;

@@ -24,6 +24,7 @@ export type Obligation = {
 	start_date: Date;
 	amount: number;
 	description: string;
+	end_date: Date | null;
 };
 
 export type Log = {

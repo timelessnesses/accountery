@@ -81,3 +81,14 @@ You can also deploy [`accountery-cron`](https://github.com/timelessnesses/accoun
 - No resetting session tokens, we switched from session tokens to JWT for performance with expiration time of one hour. You can log out and log back in to refresh the token.
 - No password reset or account logins, GSI handles that.
 - You can't really delete student account once they've made an action (like logging in) because of SQLite's foreign key constraints. You can only delete students that have no obligations or actions in the logs.
+
+
+### Obligation date ranges and calendar subscriptions
+
+Admin obligations support an inclusive start and end date, including single-day and multi-month ranges. Existing obligations retain their seven-day range. Older cron workers that omit `end_date` continue to work.
+
+Apply migrations `0013_ics.sql` (subscription tokens) and `0014_guh.sql` (end dates and backfill) before running the updated app. For local development, run `pnpm exec wrangler d1 migrations apply accountingdb --local`. Apply the pending migrations to the production database as part of deployment.
+
+The student calendar and admin obligations page offer **Download .ics** and **Sync calendar**. Create a private subscription link, then add it using your calendar app's subscribe/from-URL option. Subscriptions include obligation descriptions, amounts, and dates; refresh timing is controlled by the external calendar app. Downloading imports a snapshot. Revoking a link blocks subsequent feed requests; create a new link to subscribe again.
+
+Calendar regression tests (Node 24+): `node --test tests/calendar.test.mjs`.

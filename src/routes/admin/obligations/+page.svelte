@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
+	import type { PageProps } from './$types';
 	import PaymentCalendar from '$lib/PaymentCalendar.svelte';
+	import CalendarSync from '$lib/CalendarSync.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Table from '$lib/components/ui/table';
 	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
@@ -23,12 +26,17 @@
 		students: StudentWeek[];
 	};
 
-	const { data } = $props();
+	const { data, form }: PageProps = $props();
 
 	const weeks = $derived(data.weeks as ObligationWeek[]);
-	let selectedWeek = $state<ObligationWeek | undefined>();
+	let selectedId = $state<string>();
+	const selectedWeek = $derived(weeks.find((week) => week.id === selectedId) ?? weeks[0]);
 	let showCreateForm = $state(false);
 	let showEditForm = $state(false);
+	let createStart = $state('');
+	let createEnd = $state('');
+	let editStart = $derived(selectedWeek?.dayStart ?? '');
+	let editEnd = $derived(selectedWeek?.dayEnd ?? '');
 
 	const selectedPaidStudents = $derived(
 		selectedWeek?.students.filter((student) => student.status === 'paid') ?? []
@@ -38,21 +46,15 @@
 	);
 
 	function selectWeek(week: AllocatedWeek) {
-		selectedWeek = weeks.find((item) => item.id === week.id);
+		selectedId = week.id;
 	}
 
 	function handleWeekRowKeydown(event: KeyboardEvent, week: ObligationWeek) {
 		if (event.key !== 'Enter' && event.key !== ' ') return;
 
 		event.preventDefault();
-		selectedWeek = week;
+		selectedId = week.id;
 	}
-
-	$effect(() => {
-		if (!selectedWeek && weeks.length > 0) {
-			selectedWeek = weeks[0];
-		}
-	});
 
 	function statusClass(status: AllocatedWeek['status']) {
 		return status === 'paid'
@@ -70,7 +72,7 @@
 		<div>
 			<h1 class="text-lg font-semibold text-foreground">Obligations</h1>
 			<p class="text-sm text-muted-foreground">
-				{weeks.length} weeks · {data.totalStudents} students
+				{weeks.length} obligations · {data.totalStudents} students
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2">
@@ -80,20 +82,45 @@
 				disabled={!selectedWeek}
 				onclick={() => (showEditForm = !showEditForm)}
 			>
-				Existing week obligation
+				Edit selected obligation
 			</Button>
 		</div>
 	</div>
+
+	{#if form && !form.ok}
+		<p role="alert" class="rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+			{form.message}
+		</p>
+	{/if}
 
 	{#if showCreateForm}
 		<form
 			method="POST"
 			action="?/create"
-			class="grid gap-3 rounded-md border border-border bg-card p-4 sm:grid-cols-[180px_160px_1fr_auto]"
+			use:enhance
+			class="grid gap-3 rounded-md border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[170px_170px_120px_1fr_auto]"
 		>
 			<label class="space-y-1 text-sm">
 				<span class="font-medium">Start date</span>
-				<input name="start_date" type="date" required class="w-full rounded-md border px-3 py-2" />
+				<input
+					name="start_date"
+					type="date"
+					bind:value={createStart}
+					max={createEnd || undefined}
+					required
+					class="w-full rounded-md border px-3 py-2"
+				/>
+			</label>
+			<label class="space-y-1 text-sm">
+				<span class="font-medium">End date (inclusive)</span>
+				<input
+					name="end_date"
+					type="date"
+					bind:value={createEnd}
+					min={createStart || undefined}
+					required
+					class="w-full rounded-md border px-3 py-2"
+				/>
 			</label>
 			<label class="space-y-1 text-sm">
 				<span class="font-medium">Amount</span>
@@ -124,7 +151,8 @@
 		<form
 			method="POST"
 			action="?/update"
-			class="grid gap-3 rounded-md border border-border bg-card p-4 sm:grid-cols-[180px_160px_1fr_auto]"
+			use:enhance
+			class="grid gap-3 rounded-md border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[170px_170px_120px_1fr_auto]"
 		>
 			<input type="hidden" name="id" value={selectedWeek.id} />
 			<label class="space-y-1 text-sm">
@@ -133,7 +161,19 @@
 					name="start_date"
 					type="date"
 					required
-					value={selectedWeek.weekStart}
+					bind:value={editStart}
+					max={editEnd || undefined}
+					class="w-full rounded-md border px-3 py-2"
+				/>
+			</label>
+			<label class="space-y-1 text-sm">
+				<span class="font-medium">End date (inclusive)</span>
+				<input
+					name="end_date"
+					type="date"
+					bind:value={editEnd}
+					min={editStart || undefined}
+					required
 					class="w-full rounded-md border px-3 py-2"
 				/>
 			</label>
@@ -163,6 +203,8 @@
 		</form>
 	{/if}
 
+	<CalendarSync />
+
 	<section class="h-[620px] rounded-md border border-border bg-card p-4">
 		<PaymentCalendar {weeks} onselect={selectWeek} />
 	</section>
@@ -172,8 +214,8 @@
 			<Table.Root class="w-full">
 				<Table.Header>
 					<Table.Row>
-						<Table.Head>Week ID</Table.Head>
-						<Table.Head>Day range</Table.Head>
+						<Table.Head>ID</Table.Head>
+						<Table.Head>Date range</Table.Head>
 						<Table.Head>Description</Table.Head>
 						<Table.Head class="text-right">Amount</Table.Head>
 						<Table.Head class="text-right">Paid</Table.Head>
@@ -189,7 +231,7 @@
 							aria-pressed={selectedWeek?.id === week.id}
 							class={(selectedWeek?.id === week.id ? 'bg-info/10 ' : '') +
 								'cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none'}
-							onclick={() => (selectedWeek = week)}
+							onclick={() => (selectedId = week.id)}
 							onkeydown={(event) => handleWeekRowKeydown(event, week)}
 						>
 							<Table.Cell>
@@ -197,7 +239,7 @@
 									#{week.id}
 								</span>
 							</Table.Cell>
-							<Table.Cell>{formatWeekRange(week.weekStart)}</Table.Cell>
+							<Table.Cell>{formatWeekRange(week.dayStart, week.dayEnd)}</Table.Cell>
 							<Table.Cell class="max-w-[260px] truncate">{week.label}</Table.Cell>
 							<Table.Cell class="text-right">{currency.format(week.amount)}</Table.Cell>
 							<Table.Cell class="text-right">
@@ -221,9 +263,11 @@
 		<aside class="rounded-md border border-border bg-card">
 			{#if selectedWeek}
 				<div class="border-b border-border p-4">
-					<p class="text-xs font-medium text-muted-foreground">Selected week</p>
+					<p class="text-xs font-medium text-muted-foreground">Selected obligation</p>
 					<h2 class="mt-1 text-base font-semibold">#{selectedWeek.id} · {selectedWeek.label}</h2>
-					<p class="text-sm text-muted-foreground">{formatWeekRange(selectedWeek.weekStart)}</p>
+					<p class="text-sm text-muted-foreground">
+						{formatWeekRange(selectedWeek.dayStart, selectedWeek.dayEnd)}
+					</p>
 					<div class="mt-3 grid grid-cols-2 gap-2 text-sm">
 						<div class="rounded-md bg-success/10 p-2 text-success">
 							<p class="text-xs">Paid</p>
@@ -240,7 +284,9 @@
 					<div class="p-4">
 						<h3 class="mb-2 text-xs font-semibold text-success">Paid students</h3>
 						{#if selectedPaidStudents.length === 0}
-							<p class="text-sm text-muted-foreground">No students have completed this week.</p>
+							<p class="text-sm text-muted-foreground">
+								No students have completed this obligation.
+							</p>
 						{:else}
 							<ul class="space-y-2">
 								{#each selectedPaidStudents as student (student.email)}
@@ -264,7 +310,7 @@
 					<div class="p-4">
 						<h3 class="mb-2 text-xs font-semibold text-danger">Incomplete students</h3>
 						{#if selectedIncompleteStudents.length === 0}
-							<p class="text-sm text-muted-foreground">Everyone has completed this week.</p>
+							<p class="text-sm text-muted-foreground">Everyone has completed this obligation.</p>
 						{:else}
 							<ul class="space-y-2">
 								{#each selectedIncompleteStudents as student (student.email)}
@@ -300,7 +346,9 @@
 					</div>
 				</div>
 			{:else}
-				<p class="p-4 text-sm text-muted-foreground">Select a week to view student status.</p>
+				<p class="p-4 text-sm text-muted-foreground">
+					Select an obligation to view student status.
+				</p>
 			{/if}
 		</aside>
 	</section>

@@ -1,14 +1,17 @@
-// Domain types + reactive store for weekly payment obligations.
-// Persistence: client-side localStorage (mock). No backend.
+// Domain types and date helpers for payment obligations.
+
+import { SvelteDate } from 'svelte/reactivity';
 
 export type WeekStatus = 'paid' | 'partial' | 'unpaid' | 'waiting_approval';
 
 export interface Obligation {
 	id: string;
-	/** ISO date (yyyy-mm-dd) of the Monday that starts this obligation week. */
-	weekStart: string;
+	/** Inclusive ISO start date (yyyy-mm-dd). */
+	dayStart: string;
 	label: string;
 	cost: number;
+	/** Inclusive ISO end date (yyyy-mm-dd). */
+	dayEnd: string;
 }
 
 export interface Payment {
@@ -38,7 +41,7 @@ export const currency = new Intl.NumberFormat('th-TH', {
 /* ----------------------------- date helpers ----------------------------- */
 
 export function toISODate(d: Date): string {
-	const x = new Date(d);
+	const x = new SvelteDate(d);
 	x.setHours(0, 0, 0, 0);
 	const year = x.getFullYear();
 	const month = String(x.getMonth() + 1).padStart(2, '0');
@@ -48,7 +51,7 @@ export function toISODate(d: Date): string {
 
 /** Monday-based start of the week containing `d`. */
 export function startOfWeek(d: Date): Date {
-	const x = new Date(d);
+	const x = new SvelteDate(d);
 	x.setHours(0, 0, 0, 0);
 	const day = (x.getDay() + 6) % 7; // 0 = Monday
 	x.setDate(x.getDate() - day);
@@ -56,15 +59,14 @@ export function startOfWeek(d: Date): Date {
 }
 
 export function addDays(iso: string, days: number): string {
-	const d = new Date(iso + 'T00:00:00');
+	const d = new SvelteDate(iso + 'T00:00:00');
 	d.setDate(d.getDate() + days);
 	return toISODate(d);
 }
 
-export function formatWeekRange(weekStart: string): string {
-	const start = new Date(weekStart + 'T00:00:00');
-	const end = new Date(start);
-	end.setDate(end.getDate() + 6);
+export function formatWeekRange(dayStart: string, dayEnd: string): string {
+	const start = new SvelteDate(dayStart + 'T00:00:00');
+	const end = new SvelteDate(dayEnd + 'T00:00:00');
 	const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 	return `${fmt(start)} – ${fmt(end)}`;
 }
