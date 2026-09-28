@@ -67,6 +67,8 @@ const { POST: deleteUser } = await import('../src/routes/admin/users/[user]/dele
 const { POST: importUsers } = await import('../src/routes/admin/users/import-students/+server.ts');
 const googleLogin = await import('../src/routes/api/auth/google-jwt/+server.ts');
 const { OAuth2Client } = await import('google-auth-library');
+const { newWeeklyObligations } = await import('../accounting-cron/src/obligations.ts');
+const { default: obligationWorker } = await import('../accounting-cron/src/index.ts');
 const user = { email: 'test@example.com', name: 'Test', nickname: 'Test', admin: true };
 const origin = 'https://accounting.example.com';
 function fixture() {
@@ -86,6 +88,7 @@ function fixture() {
 	sql.exec(
 		readFileSync(resolve(root, 'migrations/0015_departures_and_obligation_deletion.sql'), 'utf8')
 	);
+	sql.exec(readFileSync(resolve(root, 'migrations/0016_obligation_creation_pauses.sql'), 'utf8'));
 	const database = {
 		prepare(query) {
 			const statement = sql.prepare(query);
@@ -102,7 +105,8 @@ function fixture() {
 					return { results: statement.all(...params) };
 				},
 				async run() {
-					return statement.run(...params);
+					const result = statement.run(...params);
+					return { success: true, results: [], meta: { changes: Number(result.changes) } };
 				}
 			};
 		},
@@ -569,5 +573,176 @@ test('deleting and importing a departed user never removes the sign-in block', a
 		parseDateInput('2026-09-28')
 	);
 	await assert.rejects(requireLoginUser(database, 'left@tsu.ac.th'), (e) => e.status === 403);
+	sql.close();
+});
+
+test('admins can save, edit, list, and remove automatic creation pauses without changing existing charges', async () => {
+	const { sql, database, event } = fixture();
+	const fields = { start_date: '2026-10-04', end_date: '2026-10-18', reason: 'Semester break' };
+	assert.equal(
+		(await actions.saveCreationPause({ ...event, request: request('POST', fields) })).ok,
+		true
+	);
+	const pause = sql.prepare('SELECT * FROM obligation_creation_pauses').get();
+	assert.equal(pause.start_date, parseDateInput(fields.start_date));
+	assert.equal(pause.end_date, parseDateInput(fields.end_date));
+	assert.equal(pause.reason, fields.reason);
+	assert.deepEqual((await loadObligations(event)).creationPauses, [{ id: pause.id, ...fields }]);
+	await actions.saveCreationPause({
+		...event,
+		request: request('POST', {
+			...fields,
+			id: String(pause.id),
+			end_date: '2026-10-04',
+			reason: 'One week'
+		})
+	});
+	assert.equal(
+		sql.prepare('SELECT end_date FROM obligation_creation_pauses').get().end_date,
+		pause.start_date
+	);
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM obligations').get().n, 1);
+	assert.equal((await getUserBalances(database, user.email)).results[0].owed, 30);
+	await actions.removeCreationPause({
+		...event,
+		request: request('POST', { id: String(pause.id) })
+	});
+	assert.equal((await loadObligations(event)).creationPauses.length, 0);
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM logs').get().n, 3);
+	assert.equal(
+		(
+			await actions.removeCreationPause({
+				...event,
+				request: request('POST', { id: String(pause.id) })
+			})
+		).status,
+		404
+	);
+	sql.close();
+});
+
+test('automatic creation controls reject invalid dates, invalid ids and non-admin writes', async () => {
+	const { sql, event } = fixture();
+	const fields = { start_date: '2026-10-04', end_date: '2026-10-18' };
+	for (const bad of [
+		{ start_date: '' },
+		{ end_date: '' },
+		{ start_date: '2026-02-30' },
+		{ end_date: '2026-10-03' },
+		{ id: '0' },
+		{ id: '1.5' }
+	]) {
+		assert.equal(
+			(
+				await actions.saveCreationPause({
+					...event,
+					request: request('POST', { ...fields, ...bad })
+				})
+			).status,
+			400
+		);
+	}
+	assert.equal(
+		(
+			await actions.saveCreationPause({
+				...event,
+				request: request('POST', { ...fields, id: '999' })
+			})
+		).status,
+		404
+	);
+	for (const id of ['', '0', '-1', '1.5', 'no'])
+		assert.equal(
+			(await actions.removeCreationPause({ ...event, request: request('POST', { id }) })).status,
+			400
+		);
+	for (const action of [actions.saveCreationPause, actions.removeCreationPause]) {
+		for (const locals of [{}, { user: { ...user, admin: false } }]) {
+			await assert.rejects(
+				action({ ...event, locals, request: request('POST', { ...fields, id: '1' }) }),
+				(e) => [401, 403].includes(e.status)
+			);
+		}
+	}
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM obligation_creation_pauses').get().n, 0);
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM logs').get().n, 0);
+	sql.close();
+});
+
+test('creator skips inclusive start-date boundaries and resumes after the paused range', async () => {
+	const { sql, database, event } = fixture();
+	sql.exec('DELETE FROM obligations');
+	await actions.saveCreationPause({
+		...event,
+		request: request('POST', { start_date: '2026-10-04', end_date: '2026-10-11' })
+	});
+	assert.equal(await newWeeklyObligations(database, new Date('2026-09-28T12:00:00Z')), false);
+	assert.equal(await newWeeklyObligations(database, new Date('2026-10-04T00:00:00Z')), false);
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM obligations').get().n, 0);
+	assert.equal(await newWeeklyObligations(database, new Date('2026-10-12T12:00:00Z')), true);
+	const row = sql.prepare('SELECT * FROM obligations').get();
+	assert.equal(row.start_date, parseDateInput('2026-10-18'));
+	assert.equal(row.end_date, parseDateInput('2026-10-24'));
+	assert.equal(row.amount, 30);
+	sql.close();
+});
+
+test('creator uses obligation start dates rather than execution time or overlap with the rest of a week', async () => {
+	const { sql, database, event } = fixture();
+	sql.exec('DELETE FROM obligations');
+	await actions.saveCreationPause({
+		...event,
+		request: request('POST', { start_date: '2026-09-28', end_date: '2026-10-03' })
+	});
+	await actions.saveCreationPause({
+		...event,
+		request: request('POST', { start_date: '2026-10-05', end_date: '2026-10-10' })
+	});
+	assert.equal(await newWeeklyObligations(database, new Date('2026-09-28T12:00:00Z')), true);
+	assert.equal(
+		sql.prepare('SELECT start_date FROM obligations').get().start_date,
+		parseDateInput('2026-10-04')
+	);
+	sql.close();
+});
+
+test('editing and removing overlapping pauses updates the next creator run without duplicating or recreating deleted weeks', async () => {
+	const { sql, database, event } = fixture();
+	sql.exec('DELETE FROM obligations');
+	const now = new Date('2026-09-28T12:00:00Z');
+	const fields = { start_date: '2026-10-04', end_date: '2026-10-11' };
+	for (let i = 0; i < 2; i++)
+		await actions.saveCreationPause({ ...event, request: request('POST', fields) });
+	await actions.removeCreationPause({ ...event, request: request('POST', { id: '1' }) });
+	assert.equal(await newWeeklyObligations(database, now), false);
+	await actions.saveCreationPause({
+		...event,
+		request: request('POST', { id: '2', start_date: '2026-10-05', end_date: '2026-10-11' })
+	});
+	assert.equal(await newWeeklyObligations(database, now), true);
+	assert.equal(await newWeeklyObligations(database, now), false);
+	sql.exec('UPDATE obligations SET deleted_at=1');
+	assert.equal(await newWeeklyObligations(database, now), false);
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM obligations').get().n, 1);
+	sql.close();
+});
+
+test('actual scheduled worker honors a saved pause, then creates only one week after removal', async (t) => {
+	const { sql, database, event } = fixture();
+	sql.exec('DELETE FROM obligations');
+	t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-09-27T00:00:00Z') });
+	await actions.saveCreationPause({
+		...event,
+		request: request('POST', { start_date: '2026-10-04', end_date: '2026-10-04' })
+	});
+	await obligationWorker.scheduled({ cron: '0 0 * * SUN' }, { AccountingDatabase: database });
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM obligations').get().n, 0);
+	await actions.removeCreationPause({ ...event, request: request('POST', { id: '1' }) });
+	await obligationWorker.scheduled({ cron: '0 0 * * SUN' }, { AccountingDatabase: database });
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM obligations').get().n, 1);
+	assert.equal(
+		sql.prepare('SELECT start_date FROM obligations').get().start_date,
+		parseDateInput('2026-10-04')
+	);
 	sql.close();
 });

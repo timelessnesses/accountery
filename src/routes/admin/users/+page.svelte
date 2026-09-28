@@ -220,6 +220,14 @@
 				importing = false;
 			});
 	}
+	let reportDialogOpen = $state(false);
+	let reportValue = $state('');
+	$effect(() => {
+		reportValue = '';
+		for (const user of data.transactionsFromUser.results) {
+			reportValue += `User: ${user.name} (${user.email}) - Paid: ${user.paid}, Owed: ${user.owed}, Net: ${user.net}\n`;
+		}
+	});
 </script>
 
 <h1>Users</h1>
@@ -373,6 +381,8 @@
 					fileInput.click();
 				}}>Import Student Data</Button
 			>
+			<Button
+				onclick={()=> {}}>Report User's Balance As Text</Button>
 		{/snippet}
 	</DataTable>
 </div>
@@ -384,6 +394,28 @@
 	onchange={fileChange}
 	bind:this={fileInput}
 />
+
+<Dialog.Root open={reportDialogOpen}>
+	<Dialog.Portal>
+		<Dialog.Overlay
+			class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm
+				data-[state=open]:animate-in data-[state=open]:fade-in
+				data-[state=closed]:animate-out data-[state=closed]:fade-out"
+		/>
+
+		<Dialog.Content
+			class="fixed left-1/2 top-1/2 z-50
+				w-[95vw] max-w-2xl
+				-translate-x-1/2 -translate-y-1/2
+				rounded-xl border bg-background p-6 shadow-xl
+				data-[state=open]:animate-in data-[state=open]:fade-in data-[state=open]:zoom-in-95
+				data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95"
+		>
+			<Dialog.Title class="text-lg font-semibold">Report User's Balance As Text</Dialog.Title>
+			<textarea readonly class="w-full h-full rounded-md border bg-background p-2 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background" bind:value={reportValue}></textarea>
+		</Dialog.Content>
+	</Dialog.Portal>
+</Dialog.Root>
 
 <Dialog.Root open={nameDialogOpen}>
 	<Dialog.Portal>
