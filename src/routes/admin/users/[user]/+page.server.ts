@@ -1,118 +1,31 @@
-import { obligationDates, unixTimestampToDate } from '$lib/date';
+import { unixTimestampToDate } from '$lib/date';
 import { buildAllocatedWeeks } from '$lib/paymentAlloc';
-import type {
-	Obligation,
-	Transaction,
-	TransformedUser,
-	User
-} from '$lib/types/AccountingDatabaseTypes';
+import { getUserBalances, getUserObligations } from '$lib/server/billing';
+import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
 import { error } from '@sveltejs/kit';
 
 export const load = async ({ params, platform, locals }) => {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
-	const user = await accountingDatabase
-		.prepare(
-			`
-        SELECT *
-        FROM users
-        WHERE email = ? AND deleted_at IS NULL
-    `
-		)
-		.bind(params.user)
-		.first<User>();
-	const netUser = await accountingDatabase
-		.prepare(
-			`
-        WITH obligation_total AS (
-            SELECT COALESCE(SUM(amount), 0) AS owed
-            FROM obligations
-        )
-        SELECT
-            u.email,
-            u.name,
-            u.nickname,
-            u.session_expiry,
-			u.logged_in_when,
-
-            COALESCE(
-                SUM(
-                    CASE
-                        WHEN t.approved = 'approved'
-                        THEN t.amount
-                        ELSE 0
-                    END
-                ),
-                0
-            ) AS paid,
-
-            obligation_total.owed,
-
-            COALESCE(
-                SUM(
-                    CASE
-                        WHEN t.approved = 'approved'
-                        THEN t.amount
-                        ELSE 0
-                    END
-                ),
-                0
-            ) - obligation_total.owed AS net
-
-        FROM users u
-        LEFT JOIN transactions t
-            ON t.email = u.email
-
-        CROSS JOIN obligation_total
-        WHERE u.email = ? AND u.deleted_at IS NULL
-        GROUP BY u.email;
-    `
-		)
-		.bind(params.user)
-		.first<TransformedUser>();
-
-	if (netUser) {
-		if (netUser.logged_in_when) {
-			netUser.logged_in_when = new Date(
-				parseInt(netUser.logged_in_when as unknown as string) * 1000
-			);
-		}
-		if (netUser.session_expiry) {
-			netUser.session_expiry = new Date(
-				parseInt(netUser.session_expiry as unknown as string) * 1000
-			);
-		}
-	}
+	if (!locals.user) error(401, 'Unauthorized');
+	const database = platform!.env.AccountingDatabase;
+	const { results } = await getUserBalances(database, params.user);
+	const user = results[0];
+	if (!user) error(404, 'User not found');
 
 	const allTransactionsFromUser = (
-		await accountingDatabase
+		await database
 			.prepare('SELECT * FROM transactions WHERE email = ?')
 			.bind(params.user)
 			.all<Transaction>()
-	).results.map((t) => ({ ...t, date: unixTimestampToDate(t.date) }));
-
-	const allObligations = (
-		await accountingDatabase.prepare('SELECT * FROM obligations').all<Obligation>()
-	).results // o.start_date is a number
-		.map((o) => ({
-			...o,
-			...obligationDates(o)
-		}));
-
-	if (!user || !netUser) {
-		throw error(404, 'User not found');
-	}
+	).results.map((transaction) => ({ ...transaction, date: unixTimestampToDate(transaction.date) }));
+	const allObligations = await getUserObligations(database, params.user);
 	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
 
-	const nextDue = allocatedWeeks.find((week) => week.status !== 'paid');
 	return {
 		user,
-		netUser,
+		netUser: user,
 		allTransactionsFromUser,
 		allObligations,
-		nextDue,
+		nextDue: allocatedWeeks.find((week) => week.status !== 'paid'),
 		allocatedWeeks
 	};
 };

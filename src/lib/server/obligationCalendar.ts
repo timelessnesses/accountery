@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { createEvents, type DateArray } from 'ics';
 import { obligationDates } from '$lib/date';
 import type { Obligation } from '$lib/types/AccountingDatabaseTypes';
+import { getUserObligations } from './billing';
 
 function dateArray(date: Date): DateArray {
 	return [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()];
@@ -30,11 +31,14 @@ export function buildObligationCalendar(obligations: Obligation[], origin: strin
 	return value;
 }
 
-export async function calendarResponse(database: D1Database, origin: string, download = false) {
-	const obligations = await database
-		.prepare('SELECT * FROM obligations ORDER BY start_date, id')
-		.all<Obligation>();
-	return new Response(buildObligationCalendar(obligations.results, origin), {
+export async function calendarResponse(
+	database: D1Database,
+	origin: string,
+	email: string,
+	download = false
+) {
+	const obligations = await getUserObligations(database, email);
+	return new Response(buildObligationCalendar(obligations, origin), {
 		headers: {
 			'Content-Type': 'text/calendar; charset=utf-8',
 			'Content-Disposition': `${download ? 'attachment' : 'inline'}; filename="obligations.ics"`,
@@ -48,7 +52,7 @@ export async function calendarResponse(database: D1Database, origin: string, dow
 export async function requireCalendarUser(database: D1Database, user: App.Locals['user']) {
 	if (!user) error(401, 'Sign in to access your calendar');
 	const active = await database
-		.prepare('SELECT email FROM users WHERE email = ? AND deleted_at IS NULL')
+		.prepare('SELECT email FROM users WHERE email = ? AND deleted_at IS NULL AND left_at IS NULL')
 		.bind(user.email)
 		.first();
 	if (!active) error(403, 'Account unavailable');

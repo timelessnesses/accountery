@@ -3,6 +3,6 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ platform, locals, url }) => {
 	const database = platform!.env.AccountingDatabase;
-	await requireCalendarUser(database, locals.user);
-	return calendarResponse(database, url.origin, true);
+	const email = await requireCalendarUser(database, locals.user);
+	return calendarResponse(database, url.origin, email, true);
 };

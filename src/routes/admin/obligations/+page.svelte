@@ -33,6 +33,8 @@
 	const selectedWeek = $derived(weeks.find((week) => week.id === selectedId) ?? weeks[0]);
 	let showCreateForm = $state(false);
 	let showEditForm = $state(false);
+	let deleteWeek = $state<ObligationWeek | null>(null);
+	let deleting = $state(false);
 	let createStart = $state('');
 	let createEnd = $state('');
 	let editStart = $derived(selectedWeek?.dayStart ?? '');
@@ -84,6 +86,13 @@
 			>
 				Edit selected obligation
 			</Button>
+			<Button
+				variant="destructive"
+				disabled={!selectedWeek}
+				onclick={() => (deleteWeek = selectedWeek)}
+			>
+				Delete selected obligation
+			</Button>
 		</div>
 	</div>
 
@@ -91,6 +100,52 @@
 		<p role="alert" class="rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
 			{form.message}
 		</p>
+	{/if}
+
+	{#if deleteWeek}
+		<form
+			method="POST"
+			action="?/delete"
+			use:enhance={() => {
+				deleting = true;
+				return async ({ update, result }) => {
+					try {
+						await update();
+						if (result.type === 'redirect' || result.type === 'success') {
+							deleteWeek = null;
+							showEditForm = false;
+						}
+					} finally {
+						deleting = false;
+					}
+				};
+			}}
+			class="rounded-md border border-danger/30 bg-danger/5 p-4"
+			aria-label="Confirm obligation deletion"
+		>
+			<input type="hidden" name="id" value={deleteWeek.id} />
+			<h2 class="font-semibold">Delete obligation #{deleteWeek.id}?</h2>
+			<p class="mt-1 text-sm">
+				{deleteWeek.label} · {formatWeekRange(deleteWeek.dayStart, deleteWeek.dayEnd)} · {currency.format(
+					deleteWeek.amount
+				)}
+			</p>
+			<p class="mt-2 text-sm text-muted-foreground">
+				This removes the charge for all users and recalculates their balances. Payment records are
+				kept and applied to the remaining obligations.
+			</p>
+			<div class="mt-4 flex justify-end gap-2">
+				<Button
+					type="button"
+					variant="outline"
+					disabled={deleting}
+					onclick={() => (deleteWeek = null)}>Cancel</Button
+				>
+				<Button type="submit" variant="destructive" disabled={deleting}
+					>{deleting ? 'Deleting…' : 'Delete obligation'}</Button
+				>
+			</div>
+		</form>
 	{/if}
 
 	{#if showCreateForm}
@@ -243,7 +298,7 @@
 							<Table.Cell class="max-w-[260px] truncate">{week.label}</Table.Cell>
 							<Table.Cell class="text-right">{currency.format(week.amount)}</Table.Cell>
 							<Table.Cell class="text-right">
-								{week.paidStudents} / {data.totalStudents}
+								{week.paidStudents} / {week.students.length}
 							</Table.Cell>
 							<Table.Cell class="text-right">{week.incompleteStudents}</Table.Cell>
 							<Table.Cell class="text-right">
@@ -255,6 +310,12 @@
 								</span>
 							</Table.Cell>
 						</Table.Row>
+					{:else}
+						<Table.Row
+							><Table.Cell colspan={7} class="h-24 text-center text-muted-foreground"
+								>No obligations. Create an obligation to get started.</Table.Cell
+							></Table.Row
+						>
 					{/each}
 				</Table.Body>
 			</Table.Root>

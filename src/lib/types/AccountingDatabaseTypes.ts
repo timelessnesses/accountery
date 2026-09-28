@@ -6,6 +6,7 @@ export type User = {
 	role: 'user' | 'admin';
 	logged_in_when: Date | null;
 	deleted_at: Date | null;
+	left_at: number | null;
 };
 
 export type Transaction = {

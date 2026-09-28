@@ -3,6 +3,8 @@ import { buildAllocatedWeeks } from '$lib/paymentAlloc';
 import type { AllocatedWeek } from '$lib/payments.svelte';
 import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabaseTypes';
 import { fail, redirect } from '@sveltejs/kit';
+import { requireAdmin } from '$lib/server/admin';
+import { applicableObligationSql } from '$lib/server/billing';
 
 type StudentWeek = {
 	email: string;
@@ -38,7 +40,7 @@ export const load = async ({ platform }) => {
 
 	const obligations = (
 		await accountingDatabase
-			.prepare('SELECT * FROM obligations ORDER BY start_date')
+			.prepare('SELECT * FROM obligations WHERE deleted_at IS NULL ORDER BY start_date, id')
 			.all<Obligation>()
 	).results.map((obligation) => ({
 		...obligation,
@@ -65,7 +67,7 @@ export const load = async ({ platform }) => {
 			amount: obligation.amount,
 			allocated: 0,
 			pendingAllocated: 0,
-			remaining: obligation.amount * users.length,
+			remaining: 0,
 			status: 'unpaid',
 			paidStudents: 0,
 			pendingStudents: 0,
@@ -74,13 +76,27 @@ export const load = async ({ platform }) => {
 		});
 	}
 
+	const eligibleRows = (
+		await accountingDatabase
+			.prepare(
+				`
+		SELECT u.email, o.id FROM users u JOIN obligations o ON ${applicableObligationSql}
+		WHERE u.deleted_at IS NULL
+	`
+			)
+			.all<{ email: string; id: number }>()
+	).results;
+	const eligibleIds = new Map<string, Set<number>>();
+	for (const row of eligibleRows) {
+		if (!eligibleIds.has(row.email)) eligibleIds.set(row.email, new Set());
+		eligibleIds.get(row.email)!.add(row.id);
+	}
 	for (const user of users) {
 		const userTransactions = transactions.filter((transaction) => transaction.email === user.email);
-		const allocatedWeeks = buildAllocatedWeeks(obligations, userTransactions);
-		const info = await accountingDatabase
-			.prepare('SELECT name, nickname FROM users WHERE email = ? AND deleted_at IS NULL')
-			.bind(user.email)
-			.first<{ name: string; nickname: string }>();
+		const userObligations = obligations.filter((obligation) =>
+			eligibleIds.get(user.email)?.has(obligation.id)
+		);
+		const allocatedWeeks = buildAllocatedWeeks(userObligations, userTransactions);
 
 		for (const allocatedWeek of allocatedWeeks) {
 			const week = weeksById.get(allocatedWeek.id);
@@ -88,8 +104,8 @@ export const load = async ({ platform }) => {
 
 			const student: StudentWeek = {
 				email: user.email,
-				name: info?.name ?? user.name,
-				nickname: info?.nickname ?? user.nickname,
+				name: user.name,
+				nickname: user.nickname,
 				allocated: allocatedWeek.allocated,
 				pendingAllocated: allocatedWeek.pendingAllocated,
 				remaining: allocatedWeek.remaining,
@@ -113,7 +129,7 @@ export const load = async ({ platform }) => {
 	}
 
 	const weeks = Array.from(weeksById.values()).map((week) => {
-		const remaining = Math.max(week.amount * users.length - week.allocated, 0);
+		const remaining = Math.max(week.amount * week.students.length - week.allocated, 0);
 		const status: AllocatedWeek['status'] =
 			week.incompleteStudents === 0
 				? 'paid'
@@ -143,7 +159,8 @@ export const load = async ({ platform }) => {
 };
 
 export const actions = {
-	create: async ({ platform, request }) => {
+	create: async ({ platform, request, locals }) => {
+		requireAdmin(locals.user);
 		const values = await readObligationForm(request);
 
 		if (!values.ok) {
@@ -163,7 +180,8 @@ export const actions = {
 
 		throw redirect(303, '/admin/obligations');
 	},
-	update: async ({ platform, request }) => {
+	update: async ({ platform, request, locals }) => {
+		requireAdmin(locals.user);
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		const values = parseObligationValues(form);
@@ -185,12 +203,36 @@ export const actions = {
                     end_date = ?,
                     amount = ?,
                     description = ?
-                WHERE id = ?
+                WHERE id = ? AND deleted_at IS NULL
             `
 			)
 			.bind(values.startDate, values.endDate, values.amount, values.description, id)
 			.run();
 
+		throw redirect(303, '/admin/obligations');
+	},
+	delete: async ({ platform, request, locals }) => {
+		const admin = requireAdmin(locals.user);
+		const form = await request.formData();
+		const id = Number(form.get('id'));
+		if (!Number.isSafeInteger(id) || id <= 0) {
+			return fail(400, { ok: false, message: 'Invalid obligation id' });
+		}
+		const database = platform!.env.AccountingDatabase;
+		const obligation = await database
+			.prepare('SELECT id FROM obligations WHERE id = ? AND deleted_at IS NULL')
+			.bind(id)
+			.first();
+		if (!obligation) return fail(404, { ok: false, message: 'Obligation not found' });
+		const now = Math.floor(Date.now() / 1000);
+		await database.batch([
+			database
+				.prepare('UPDATE obligations SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL')
+				.bind(now, id),
+			database
+				.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
+				.bind(admin.email, `Deleted obligation #${id}`, now)
+		]);
 		throw redirect(303, '/admin/obligations');
 	}
 };

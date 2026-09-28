@@ -2,9 +2,8 @@ import { env as envPrivate } from '$env/dynamic/private';
 import { env as envPublic } from '$env/dynamic/public';
 import { error } from '@sveltejs/kit';
 import { OAuth2Client } from 'google-auth-library';
-import { env } from 'process';
 import * as jose from 'jose';
-import { type User } from '$lib/types/AccountingDatabaseTypes.js';
+import { requireLoginUser } from '$lib/server/loginUser';
 
 export type GoogleJwtRequest = {
 	id_token: string;
@@ -40,14 +39,7 @@ export async function POST({ request, cookies, platform }) {
 
 	const studentID = payload.email.split('@')[0];
 
-	const existsInWhitelist = await accountingDatabase
-		.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL')
-		.bind(payload.email)
-		.all();
-
-	if (existsInWhitelist.results.length === 0 && env.ADMIN_EMAIL !== payload.email) {
-		return new Response(JSON.stringify({ error: 'Student ID not whitelisted' }), { status: 400 });
-	}
+	await requireLoginUser(accountingDatabase, payload.email);
 	/* await accountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
 		payload.email,
 		`User requested Google OAuth login with JWT. Student ID: ${studentID}. Giving new session token.`,
@@ -81,14 +73,7 @@ async function issuingNewSessionToken(
 	database: D1Database,
 	secret: SecretsStoreSecret
 ) {
-	const studentID = studentEmail.split('@')[0];
-	const stmt = await database
-		.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL')
-		.bind(studentEmail)
-		.first<User>();
-	if (!stmt) {
-		throw error(400, `Student ID ${studentID} not found in the database.`);
-	}
+	const stmt = await requireLoginUser(database, studentEmail);
 
 	if (!(await secret.get())) {
 		throw error(500, 'Shared secret is not set in environment variables.');

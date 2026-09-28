@@ -1,6 +1,7 @@
 import { type StudentJWT } from './types/AccountingDatabaseTypes';
 import * as jose from 'jose';
 import { env as envPrivate } from '$env/dynamic/private';
+import { requireLoginUser } from '$lib/server/loginUser';
 
 export async function verifyJWT(
 	token: string,
@@ -16,19 +17,16 @@ export async function verifyJWT(
 		algorithms: ['HS256']
 	});
 
-	if (envPrivate.ADMIN_EMAIL && envPrivate.ADMIN_EMAIL === payload.sub) {
-		payload.role = 'admin';
-	}
-
-	if (!payload) {
+	if (!payload.sub) {
 		throw new Error('Invalid JWT token.');
 	}
+	const user = await requireLoginUser(env.AccountingDatabase, payload.sub);
 
 	return {
 		email: payload.sub as string,
-		name: payload.name,
-		nickname: payload.nickname,
-		admin: payload.role === 'admin'
+		name: user.name,
+		nickname: user.nickname,
+		admin: user.role === 'admin' || envPrivate.ADMIN_EMAIL === user.email
 	};
 }
 function turnThisToUint8Array(secret: string): Uint8Array {

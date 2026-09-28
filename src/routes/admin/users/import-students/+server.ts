@@ -14,7 +14,7 @@ export const POST = async ({ request, locals, platform }) => {
 			await Promise.all(
 				unfiltered.students.map(async (student) => {
 					const existingStudent = await platform?.env.AccountingDatabase.prepare(
-						'SELECT * FROM users WHERE email = ? AND deleted_at IS NULL'
+						'SELECT email FROM users WHERE email = ?'
 					)
 						.bind(student.id)
 						.first();
@@ -41,7 +41,7 @@ export const POST = async ({ request, locals, platform }) => {
 	});
 
 	try {
-		await platform?.env.AccountingDatabase.batch(a);
+		if (a.length > 0) await platform?.env.AccountingDatabase.batch(a);
 	} catch (e) {
 		console.error('Error inserting students:', e);
 		return error(400, 'Error inserting students');
