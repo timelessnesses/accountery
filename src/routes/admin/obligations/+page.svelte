@@ -5,6 +5,7 @@
 	import PaymentCalendar from '$lib/PaymentCalendar.svelte';
 	import CalendarSync from '$lib/CalendarSync.svelte';
 	import AutomaticObligationControl from '$lib/AutomaticObligationControl.svelte';
+	import PublicObligationsSwitch from '$lib/PublicObligationsSwitch.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Table from '$lib/components/ui/table';
 	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
@@ -57,7 +58,7 @@
 		const total = w.students.length;
 		const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
 		if (total === 0) return 'No students';
-		const paidPart = w.paidStudents === total ? 'All paid' : `${w.paidStudents}/${total} people paid`;
+		const paidPart = `${w.paidStudents} / ${total} ${total === 1 ? 'person' : 'people'} paid`;
 		return w.pendingStudents > 0
 			? `${paidPart} (${people(w.pendingStudents)} waiting to be approved)`
 			: paidPart;
@@ -81,7 +82,7 @@
 	}
 </script>
 
-<main class="mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-6 p-4 sm:p-6">
+<main class="mx-auto flex min-h-dvh min-w-0 w-full max-w-7xl flex-col gap-6 p-4 sm:p-6">
 	<div class="flex flex-wrap items-center justify-between gap-3">
 		<div>
 			<h1 class="text-lg font-semibold text-foreground">Obligations</h1>
@@ -108,6 +109,8 @@
 			</Button>
 		</div>
 	</div>
+
+	<PublicObligationsSwitch enabled={data.publicObligationsEnabled} />
 
 	{#if form && !form.ok}
 		<p role="alert" class="rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
@@ -273,12 +276,19 @@
 
 	<CalendarSync />
 
-	<section class="h-[620px] rounded-md border border-border bg-card p-4">
-		<PaymentCalendar {weeks} onselect={selectWeek} titleFormat={calendarTitle} />
+	<section
+		aria-label="Obligation payment progress calendar"
+		class="min-w-0 rounded-xl border border-border bg-card p-3 sm:p-4"
+	>
+		<p class="mb-4 text-sm text-muted-foreground">
+			People paid out of everyone assigned to each obligation. Pending approvals appear in
+			parentheses.
+		</p>
+		<PaymentCalendar {weeks} onselect={selectWeek} titleFormat={calendarTitle} fitContent />
 	</section>
 
-	<section class="grid gap-6 lg:grid-cols-[1fr_360px]">
-		<div class="overflow-hidden rounded-md border border-border bg-card">
+	<section class="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+		<div class="min-w-0 overflow-hidden rounded-md border border-border bg-card">
 			<Table.Root class="w-full">
 				<Table.Header>
 					<Table.Row>

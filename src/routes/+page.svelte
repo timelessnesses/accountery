@@ -112,6 +112,13 @@
 							Weekly Payments
 						</h1>
 						<p class="text-xs text-muted-foreground">Track and clear your weekly obligations</p>
+						{#if data.publicObligationsEnabled}
+							<a
+								href={resolve('/obligations-owed')}
+								class="mt-1 inline-block text-xs font-medium text-primary underline-offset-4 hover:underline"
+								>Obligations Owed: Public Database</a
+							>
+						{/if}
 					</div>
 				</div>
 				<div class="relative sm:hidden">

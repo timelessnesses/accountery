@@ -25,7 +25,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const isCalendarFeed =
 		/^\/api\/calendar\/[a-f0-9]{64}$/.test(path) &&
 		(event.request.method === 'GET' || event.request.method === 'HEAD');
-	const isPublic = isCalendarFeed || publicRoutes.some((r) => path.startsWith(r));
+	const isPublicBalances =
+		(path === '/obligations-owed' || path === '/obligations-owed/__data.json') &&
+		(event.request.method === 'GET' || event.request.method === 'HEAD');
+	const isPublic =
+		isCalendarFeed || isPublicBalances || publicRoutes.some((r) => path.startsWith(r));
 	if (!isPublic && !event.locals.user) {
 		return redirect(302, '/login');
 	}

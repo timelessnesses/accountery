@@ -1,6 +1,7 @@
 import { buildAllocatedWeeks } from '$lib/paymentAlloc.js';
 import { unixTimestampToDate } from '$lib/date.js';
 import { getUserObligations } from '$lib/server/billing';
+import { isPublicObligationsEnabled } from '$lib/server/publicObligations';
 import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
 import { redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
@@ -31,6 +32,7 @@ export const load = async ({ locals, platform }) => {
 	console.log(env, envPublic);
 
 	return {
+		publicObligationsEnabled: await isPublicObligationsEnabled(accountingDatabase),
 		user: locals.user,
 		transaction: allTransactionsFromUser,
 		obligations: allObligations,
