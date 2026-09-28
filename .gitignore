@@ -24,3 +24,6 @@ vite.config.ts.timestamp-*
 
 .dev.vars*
 !.dev.vars.example
+
+insert_transactions.sql
+transactions.csv

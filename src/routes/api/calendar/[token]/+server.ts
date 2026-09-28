@@ -8,13 +8,13 @@ export const GET: RequestHandler = async ({ platform, params, url }) => {
 	const token = await database
 		.prepare(
 			`
-		SELECT calendar_tokens.id FROM calendar_tokens
+		SELECT calendar_tokens.by_user FROM calendar_tokens
 		JOIN users ON users.email = calendar_tokens.by_user
-		WHERE calendar_tokens.token = ? AND users.deleted_at IS NULL
+		WHERE calendar_tokens.token = ? AND users.deleted_at IS NULL AND users.left_at IS NULL
 	`
 		)
 		.bind(params.token)
-		.first();
+		.first<{ by_user: string }>();
 	if (!token) error(404, 'Calendar not found');
-	return calendarResponse(database, url.origin);
+	return calendarResponse(database, url.origin, token.by_user);
 };

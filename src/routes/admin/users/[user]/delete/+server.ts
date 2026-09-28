@@ -18,9 +18,18 @@ export const POST = async ({ params, platform, locals }) => {
 	const env = platform?.env as Env | undefined;
 
 	try {
-		await env?.AccountingDatabase.prepare('DELETE FROM users WHERE email = ?')
+		const user = await env?.AccountingDatabase.prepare('SELECT left_at FROM users WHERE email = ?')
 			.bind(userEmail)
-			.run();
+			.first<{ left_at: number | null }>();
+		if (user && user.left_at !== null) {
+			// Keep the departure record so deleting/reimporting cannot re-enable sign-in.
+			await env?.AccountingDatabase.prepare('UPDATE users SET deleted_at = ? WHERE email = ?')
+				.bind(Math.floor(Date.now() / 1000), userEmail)
+				.run();
+		} else
+			await env?.AccountingDatabase.prepare('DELETE FROM users WHERE email = ?')
+				.bind(userEmail)
+				.run();
 		await env?.AccountingDatabase.prepare(
 			'INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)'
 		)

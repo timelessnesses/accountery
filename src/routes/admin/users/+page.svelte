@@ -6,6 +6,7 @@
 	import * as XLSX from 'xlsx';
 	import { Dialog } from 'bits-ui';
 	import Confirmation from '$lib/Confirmation.svelte';
+	import UserDeparture from '$lib/UserDeparture.svelte';
 	import type { TransformedUser } from '$lib/types/AccountingDatabaseTypes.js';
 
 	const { data } = $props();
@@ -233,6 +234,7 @@
 			<Table.Head>Name</Table.Head>
 			<Table.Head>Email</Table.Head>
 			<Table.Head>Nickname</Table.Head>
+			<Table.Head>Membership</Table.Head>
 			<Table.Head>Last Login Date</Table.Head>
 			<Table.Head>Session Expiration</Table.Head>
 			<Table.Head>Paid</Table.Head>
@@ -244,6 +246,7 @@
 			<Table.Cell>{item.name}</Table.Cell>
 			<Table.Cell>{item.email}</Table.Cell>
 			<Table.Cell>{item.nickname}</Table.Cell>
+			<Table.Cell><UserDeparture user={item} /></Table.Cell>
 			<Table.Cell
 				>{item.logged_in_when
 					? item.logged_in_when.toLocaleString('en-TH', { timeZone: 'Asia/Bangkok' })

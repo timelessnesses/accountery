@@ -1,6 +1,7 @@
 <script lang="ts">
 	import PaymentCalendar from '$lib/PaymentCalendar.svelte';
 	import TransactionLog from '$lib/TransactionLog.svelte';
+	import UserDeparture from '$lib/UserDeparture.svelte';
 	import { formatWeekRange, currency, type AllocatedWeek } from '$lib/payments.svelte';
 
 	const { data } = $props();
@@ -9,10 +10,11 @@
 		window.location.href = '/admin/users';
 	}
 
-	let selectedWeek = $state<AllocatedWeek | undefined>();
+	let selectedWeekId = $state<string>();
+	const selectedWeek = $derived(data.allocatedWeeks.find((week) => week.id === selectedWeekId));
 
 	function handleSelect(week: AllocatedWeek) {
-		selectedWeek = week;
+		selectedWeekId = week.id;
 	}
 
 	const statusMeta = {
@@ -30,7 +32,7 @@
 		throw new Error('Required data not found');
 	}
 
-	const info = data.user;
+	const info = $derived(data.user);
 	const totalPaid = $derived(
 		[...data.allTransactionsFromUser]
 			.filter((tx) => tx.approved === 'approved')
@@ -49,6 +51,7 @@
 	<span>Paid: {totalPaid} + {totalPending} = {totalPaid + totalPending}</span>
 	Owned: {totalOwed} Net: {totalPaid - totalOwed}
 </h2>
+<div class="mt-3 flex justify-center"><UserDeparture user={data.user} /></div>
 <div class="mt-6 grid gap-6 lg:grid-cols-[280px_1fr_360px]" style="height: 100%">
 	<!-- Transaction history -->
 	<div class="min-h-0">

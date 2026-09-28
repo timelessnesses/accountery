@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { env } from '$env/dynamic/public';
+	let loginError = $state('');
 	function handleLoginRequest(response: { credential: string }) {
+		loginError = '';
 		fetch('/api/auth/google-jwt', {
 			method: 'POST',
 			headers: {
@@ -12,13 +14,22 @@
 			}),
 			credentials: 'include'
 		})
-			.then((r) => {
-				if (!r.ok) throw new Error('Failed to sign in with Google');
+			.then(async (r) => {
+				if (!r.ok) {
+					const result = (await r.json().catch(() => null)) as {
+						message?: string;
+						error?: string;
+					} | null;
+					throw new Error(
+						result?.message ?? result?.error ?? 'Failed to sign in with Google. Please try again.'
+					);
+				}
 				window.location.href = '/';
 			})
 			.catch((err) => {
 				console.error('Error during Google sign-in:', err);
-				alert('Failed to sign in with Google. Please try again.');
+				loginError =
+					err instanceof Error ? err.message : 'Failed to sign in with Google. Please try again.';
 			});
 	}
 
@@ -68,4 +79,7 @@
 	<p class="text-red-500">Google OAuth client ID is not set in environment variables.</p>
 {:else}
 	<div id="google-button"></div>
+{/if}
+{#if loginError}
+	<p role="alert" class="mt-4 text-sm text-danger">{loginError}</p>
 {/if}

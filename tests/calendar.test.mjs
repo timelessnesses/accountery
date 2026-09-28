@@ -12,7 +12,15 @@ const root = resolve(import.meta.dirname, '..');
 registerHooks({
 	resolve(specifier, context, next) {
 		if (specifier === '$env/dynamic/private')
-			return { url: 'data:text/javascript,export const env = {}', shortCircuit: true };
+			return {
+				url: 'data:text/javascript,export const env = { GOOGLE_OAUTH_CLIENT_SECRET: "test-secret" }',
+				shortCircuit: true
+			};
+		if (specifier === '$env/dynamic/public')
+			return {
+				url: 'data:text/javascript,export const env = { PUBLIC_GOOGLE_OAUTH_CLIENT_ID: "test-client" }',
+				shortCircuit: true
+			};
 		let path;
 		if (specifier.startsWith('$lib/')) path = resolve(root, 'src/lib', specifier.slice(5));
 		else if (specifier.startsWith('.') && context.parentURL?.startsWith('file:'))
@@ -47,15 +55,37 @@ const subscription = await import('../src/routes/api/calendar/subscription/+serv
 const feed = await import('../src/routes/api/calendar/[token]/+server.ts');
 const download = await import('../src/routes/api/calendar.ics/+server.ts');
 const { handle } = await import('../src/hooks.server.ts');
+const { verifyJWT } = await import('../src/lib/auth.ts');
+const { SignJWT } = await import('jose');
+const { requireLoginUser } = await import('../src/lib/server/loginUser.ts');
+const { getUserBalances, getUserObligations } = await import('../src/lib/server/billing.ts');
+const { load: loadObligations } = await import('../src/routes/admin/obligations/+page.server.ts');
+const { load: loadUser } = await import('../src/routes/admin/users/[user]/+page.server.ts');
+const { POST: setLeavingDate } =
+	await import('../src/routes/admin/users/[user]/leaving-date/+server.ts');
+const { POST: deleteUser } = await import('../src/routes/admin/users/[user]/delete/+server.ts');
+const { POST: importUsers } = await import('../src/routes/admin/users/import-students/+server.ts');
+const googleLogin = await import('../src/routes/api/auth/google-jwt/+server.ts');
+const { OAuth2Client } = await import('google-auth-library');
 const user = { email: 'test@example.com', name: 'Test', nickname: 'Test', admin: true };
 const origin = 'https://accounting.example.com';
 function fixture() {
 	const sql = new DatabaseSync(':memory:');
 	sql.exec(
-		`CREATE TABLE users (email TEXT PRIMARY KEY, deleted_at INTEGER); INSERT INTO users VALUES ('test@example.com', NULL); CREATE TABLE obligations (id INTEGER PRIMARY KEY, start_date INTEGER NOT NULL, amount INTEGER NOT NULL, description TEXT NOT NULL); INSERT INTO obligations VALUES (1, 1798675200, 30, 'Legacy week');`
+		`PRAGMA foreign_keys = ON;
+		CREATE TABLE users (email TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT 'Test', nickname TEXT NOT NULL DEFAULT 'Test',
+			role TEXT NOT NULL DEFAULT 'user', session_token TEXT, session_expiry INTEGER, logged_in_when INTEGER, deleted_at INTEGER);
+		INSERT INTO users (email, role) VALUES ('test@example.com', 'admin');
+		CREATE TABLE obligations (id INTEGER PRIMARY KEY, start_date INTEGER NOT NULL, amount INTEGER NOT NULL, description TEXT NOT NULL);
+		INSERT INTO obligations VALUES (1, 1798675200, 30, 'Legacy week');
+		CREATE TABLE transactions (id INTEGER PRIMARY KEY, email TEXT REFERENCES users(email), amount INTEGER, date INTEGER, approved TEXT, description TEXT, type TEXT, image TEXT);
+		CREATE TABLE logs (id INTEGER PRIMARY KEY, email TEXT REFERENCES users(email), action TEXT, timestamp INTEGER);`
 	);
 	sql.exec(readFileSync(resolve(root, 'migrations/0013_ics.sql'), 'utf8'));
 	sql.exec(readFileSync(resolve(root, 'migrations/0014_guh.sql'), 'utf8'));
+	sql.exec(
+		readFileSync(resolve(root, 'migrations/0015_departures_and_obligation_deletion.sql'), 'utf8')
+	);
 	const database = {
 		prepare(query) {
 			const statement = sql.prepare(query);
@@ -75,6 +105,18 @@ function fixture() {
 					return statement.run(...params);
 				}
 			};
+		},
+		async batch(statements) {
+			sql.exec('BEGIN');
+			try {
+				const results = [];
+				for (const statement of statements) results.push(await statement.run());
+				sql.exec('COMMIT');
+				return results;
+			} catch (error) {
+				sql.exec('ROLLBACK');
+				throw error;
+			}
 		}
 	};
 	return {
@@ -256,5 +298,276 @@ test('only token feed GETs bypass session authentication', async () => {
 	for (const path of ['/api/calendar.ics', '/api/calendar/subscription', '/api/calendar/invalid'])
 		await assert.rejects(run(path), (e) => e.status === 302);
 	await assert.rejects(run(`/api/calendar/${token}`, 'POST'), (e) => e.status === 302);
+	sql.close();
+});
+
+function departureEvent(event, email, leavingDate) {
+	return {
+		...event,
+		params: { user: email },
+		request: new Request(`${origin}/admin/users/${email}/leaving-date`, {
+			method: 'POST',
+			headers: { origin, 'Content-Type': 'application/json' },
+			body: JSON.stringify({ leavingDate })
+		})
+	};
+}
+function billingFixture() {
+	const fixtureData = fixture();
+	fixtureData.sql.exec(`DELETE FROM obligations;
+		INSERT INTO users (email) VALUES ('left@tsu.ac.th');
+		INSERT INTO obligations (id, start_date, end_date, amount, description) VALUES
+			(1, unixepoch('2026-09-01'), unixepoch('2026-10-05'), 30, 'Earlier obligation'),
+			(2, unixepoch('2026-09-28'), unixepoch('2026-10-04'), 40, 'On leaving day'),
+			(3, unixepoch('2026-10-05'), unixepoch('2026-10-11'), 50, 'Later obligation');
+		INSERT INTO transactions (email, amount, approved, date) VALUES
+			('left@tsu.ac.th', 20, 'approved', unixepoch('2026-09-01')),
+			('left@tsu.ac.th', 5, 'pending', unixepoch('2026-09-02')),
+			('left@tsu.ac.th', 999, 'rejected', unixepoch('2026-09-02'));`);
+	return fixtureData;
+}
+
+test('custom leaving dates preserve earlier debt, exclude same-day charges, and recalculate every admin view', async () => {
+	const { sql, database, event } = billingFixture();
+	await setLeavingDate(departureEvent(event, 'left@tsu.ac.th', '2026-09-28'));
+	const balances = (await getUserBalances(database)).results;
+	const left = balances.find((row) => row.email === 'left@tsu.ac.th');
+	assert.deepEqual([left.paid, left.owed, left.net], [20, 30, -10]);
+	assert.equal(balances.find((row) => row.email === user.email).owed, 120);
+	assert.deepEqual(
+		(await getUserObligations(database, left.email)).map((o) => o.id),
+		[1]
+	);
+	const detail = await loadUser({ ...event, params: { user: left.email } });
+	assert.equal(detail.netUser.owed, 30);
+	assert.equal(detail.allTransactionsFromUser.length, 3);
+	assert.deepEqual(
+		detail.allocatedWeeks.map((w) => [w.id, w.allocated, w.pendingAllocated, w.remaining]),
+		[['1', 20, 5, 5]]
+	);
+	const overview = await loadObligations(event);
+	assert.deepEqual(
+		overview.weeks.map((w) => [w.students.length, w.remaining]),
+		[
+			[2, 40],
+			[1, 40],
+			[1, 50]
+		]
+	);
+
+	await setLeavingDate(departureEvent(event, left.email, '2026-10-06'));
+	assert.equal((await getUserBalances(database, left.email)).results[0].owed, 120);
+	await setLeavingDate(departureEvent(event, left.email, '2026-09-01'));
+	assert.equal((await getUserBalances(database, left.email)).results[0].owed, 0);
+	assert.equal((await loadObligations(event)).weeks[0].students.length, 1);
+	// Importers can store millisecond timestamps; the cutoff must still match the calendar.
+	sql.exec(
+		"UPDATE obligations SET start_date = unixepoch('2026-09-01') * 1000, end_date = unixepoch('2026-09-02') * 1000 WHERE id=1"
+	);
+	await setLeavingDate(departureEvent(event, left.email, '2026-09-28'));
+	assert.equal((await getUserBalances(database, left.email)).results[0].owed, 30);
+	assert.equal(
+		(await getUserObligations(database, left.email))[0].start_date.toISOString().slice(0, 10),
+		'2026-09-01'
+	);
+	sql.close();
+});
+
+test('deleting an obligation removes charges and calendar events, keeps payments, and prevents cron recreation', async () => {
+	const { sql, database, event } = billingFixture();
+	await assert.rejects(
+		actions.delete({ ...event, request: request('POST', { id: '1' }) }),
+		(e) => e.status === 303
+	);
+	assert.ok(sql.prepare('SELECT deleted_at FROM obligations WHERE id=1').get().deleted_at);
+	assert.equal((await getUserBalances(database, 'left@tsu.ac.th')).results[0].owed, 90);
+	const detail = await loadUser({ ...event, params: { user: 'left@tsu.ac.th' } });
+	assert.deepEqual(
+		detail.allObligations.map((o) => o.id),
+		[2, 3]
+	);
+	assert.equal(detail.allTransactionsFromUser.length, 3);
+	assert.equal(detail.allocatedWeeks[0].allocated, 20);
+	assert.deepEqual(
+		(await loadObligations(event)).weeks.map((w) => w.id),
+		['2', '3']
+	);
+	assert.doesNotMatch(await (await download.GET(event)).text(), /Earlier obligation/);
+	const { url } = await (await subscription.POST({ ...event, request: request('POST') })).json();
+	const token = new URL(url).pathname.split('/').pop();
+	assert.doesNotMatch(
+		await (await feed.GET({ ...event, params: { token } })).text(),
+		/Earlier obligation/
+	);
+	assert.ok(
+		sql
+			.prepare('SELECT 1 FROM obligations WHERE start_date = ? LIMIT 1')
+			.get(parseDateInput('2026-09-01'))
+	);
+	assert.equal(
+		(await actions.delete({ ...event, request: request('POST', { id: '1' }) })).status,
+		404
+	);
+	for (const id of ['2', '3'])
+		await assert.rejects(
+			actions.delete({ ...event, request: request('POST', { id }) }),
+			(e) => e.status === 303
+		);
+	assert.equal((await loadObligations(event)).weeks.length, 0);
+	assert.equal((await getUserBalances(database, 'left@tsu.ac.th')).results[0].net, 20);
+	assert.match(await (await download.GET(event)).text(), /BEGIN:VCALENDAR/);
+	sql.close();
+});
+
+test('departure edits and deletion reject invalid values and non-admin callers without writes', async () => {
+	const { sql, event } = billingFixture();
+	for (const leavingDate of ['', null, false, 0, '2026-02-30', '2026-13-01']) {
+		await assert.rejects(
+			setLeavingDate(departureEvent(event, 'left@tsu.ac.th', leavingDate)),
+			(e) => e.status === 400
+		);
+	}
+	for (const locals of [{}, { user: { ...user, admin: false } }]) {
+		await assert.rejects(
+			setLeavingDate(departureEvent({ ...event, locals }, 'left@tsu.ac.th', '2026-09-28')),
+			(e) => [401, 403].includes(e.status)
+		);
+		for (const action of [actions.create, actions.update, actions.delete]) {
+			await assert.rejects(
+				action({ ...event, locals, request: request('POST', { id: '1' }) }),
+				(e) => [401, 403].includes(e.status)
+			);
+		}
+	}
+	const foreign = departureEvent(event, 'left@tsu.ac.th', '2026-09-28');
+	foreign.request.headers.set('origin', 'https://other.example');
+	await assert.rejects(setLeavingDate(foreign), (e) => e.status === 403);
+	await assert.rejects(
+		setLeavingDate(departureEvent(event, 'missing@tsu.ac.th', '2026-09-28')),
+		(e) => e.status === 404
+	);
+	for (const id of ['', '0', '-1', '1.2', 'no'])
+		assert.equal(
+			(await actions.delete({ ...event, request: request('POST', { id }) })).status,
+			400
+		);
+	assert.equal(
+		sql.prepare("SELECT left_at FROM users WHERE email='left@tsu.ac.th'").get().left_at,
+		null
+	);
+	assert.equal(sql.prepare('SELECT COUNT(*) AS count FROM logs').get().count, 0);
+	sql.close();
+});
+
+test('marking a departure blocks new logins, existing JWTs, and subscriptions immediately even for future dates', async () => {
+	const { sql, database, event } = billingFixture();
+	const secretBytes = new TextEncoder().encode('test-signing-secret-with-32-bytes!');
+	const secret = Buffer.from(secretBytes).toString('base64');
+	const env = {
+		AccountingDatabase: database,
+		SharedSecrets: { get: async () => secret },
+		AUTHENTICATION_METHOD: 'JWT'
+	};
+	const token = await new SignJWT({ role: 'user', name: 'Test', nickname: 'Test' })
+		.setSubject('left@tsu.ac.th')
+		.setExpirationTime('1h')
+		.setProtectedHeader({ alg: 'HS256' })
+		.sign(secretBytes);
+	assert.equal((await verifyJWT(token, env)).email, 'left@tsu.ac.th');
+	assert.equal((await requireLoginUser(database, 'left@tsu.ac.th')).email, 'left@tsu.ac.th');
+	const studentEvent = {
+		...event,
+		locals: { user: { ...user, email: 'left@tsu.ac.th', admin: false } }
+	};
+	const { url } = await (
+		await subscription.POST({ ...studentEvent, request: request('POST') })
+	).json();
+	const calendarToken = new URL(url).pathname.split('/').pop();
+	sql.exec(
+		"UPDATE users SET session_token='old-session', session_expiry=9999999999 WHERE email='left@tsu.ac.th'"
+	);
+	await setLeavingDate(departureEvent(event, 'left@tsu.ac.th', '2099-01-01'));
+	await assert.rejects(requireLoginUser(database, 'left@tsu.ac.th'), (e) => e.status === 403);
+	await assert.rejects(verifyJWT(token, env), (e) => e.status === 403);
+	await assert.rejects(
+		feed.GET({ ...event, params: { token: calendarToken } }),
+		(e) => e.status === 404
+	);
+	await assert.rejects(download.GET(studentEvent), (e) => e.status === 403);
+	const saved = sql
+		.prepare("SELECT session_token, session_expiry FROM users WHERE email='left@tsu.ac.th'")
+		.get();
+	assert.equal(saved.session_token, null);
+	assert.equal(saved.session_expiry, null);
+	const cookies = [];
+	await assert.rejects(
+		handle({
+			event: {
+				...event,
+				platform: { env },
+				locals: {},
+				cookies: { get: () => token, set: (...args) => cookies.push(args) },
+				url: new URL('/admin/users', origin),
+				request: request('GET')
+			},
+			resolve: () => {
+				throw new Error('Blocked user reached the route');
+			}
+		}),
+		(e) => e.status === 302
+	);
+	assert.equal(cookies[0][0], 'token');
+	assert.equal(cookies[0][1], '');
+	await setLeavingDate(departureEvent(event, 'left@tsu.ac.th', '2026-09-01'));
+	await assert.rejects(verifyJWT(token, env), (e) => e.status === 403);
+	sql.close();
+});
+
+test('Google login returns an account-left error and does not issue a cookie', async (t) => {
+	const { sql, event } = billingFixture();
+	await setLeavingDate(departureEvent(event, 'left@tsu.ac.th', '2099-01-01'));
+	t.mock.method(OAuth2Client.prototype, 'verifyIdToken', async () => ({
+		getPayload: () => ({ email: 'left@tsu.ac.th', email_verified: true })
+	}));
+	await assert.rejects(
+		googleLogin.POST({
+			...event,
+			request: new Request(origin, {
+				method: 'POST',
+				body: JSON.stringify({ id_token: 'mock-google-token' })
+			}),
+			cookies: {
+				set: () => {
+					throw new Error('Blocked account received a cookie');
+				}
+			}
+		}),
+		(e) => e.status === 403 && /marked as left/.test(e.body.message)
+	);
+	sql.close();
+});
+
+test('deleting and importing a departed user never removes the sign-in block', async () => {
+	const { sql, database, event } = billingFixture();
+	await setLeavingDate(departureEvent(event, 'left@tsu.ac.th', '2026-09-28'));
+	await deleteUser({ ...event, params: { user: 'left@tsu.ac.th' } });
+	assert.ok(
+		sql.prepare("SELECT deleted_at FROM users WHERE email='left@tsu.ac.th'").get().deleted_at
+	);
+	const response = await importUsers({
+		...event,
+		request: new Request(origin, {
+			method: 'POST',
+			body: JSON.stringify({
+				students: [{ id: 'left@tsu.ac.th', name: 'Reimport', nickname: 'Test' }]
+			})
+		})
+	});
+	assert.equal(response.status, 200);
+	assert.equal(
+		sql.prepare("SELECT left_at FROM users WHERE email='left@tsu.ac.th'").get().left_at,
+		parseDateInput('2026-09-28')
+	);
+	await assert.rejects(requireLoginUser(database, 'left@tsu.ac.th'), (e) => e.status === 403);
 	sql.close();
 });
