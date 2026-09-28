@@ -52,6 +52,17 @@
 		selectedId = week.id;
 	}
 
+	function calendarTitle(week: AllocatedWeek) {
+		const w = week as ObligationWeek;
+		const total = w.students.length;
+		const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
+		if (total === 0) return 'No students';
+		const paidPart = w.paidStudents === total ? 'All paid' : `${w.paidStudents}/${total} people paid`;
+		return w.pendingStudents > 0
+			? `${paidPart} (${people(w.pendingStudents)} waiting to be approved)`
+			: paidPart;
+	}
+
 	function handleWeekRowKeydown(event: KeyboardEvent, week: ObligationWeek) {
 		if (event.key !== 'Enter' && event.key !== ' ') return;
 
@@ -263,7 +274,7 @@
 	<CalendarSync />
 
 	<section class="h-[620px] rounded-md border border-border bg-card p-4">
-		<PaymentCalendar {weeks} onselect={selectWeek} />
+		<PaymentCalendar {weeks} onselect={selectWeek} titleFormat={calendarTitle} />
 	</section>
 
 	<section class="grid gap-6 lg:grid-cols-[1fr_360px]">

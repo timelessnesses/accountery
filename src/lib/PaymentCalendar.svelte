@@ -5,8 +5,15 @@
 	import interactionPlugin from '@fullcalendar/interaction';
 	import { addDays, currency, toISODate, type AllocatedWeek } from './payments.svelte';
 
-	let { weeks, onselect }: { weeks: AllocatedWeek[]; onselect?: (w: AllocatedWeek) => void } =
-		$props();
+	let {
+		weeks,
+		onselect,
+		titleFormat
+	}: {
+		weeks: AllocatedWeek[];
+		onselect?: (w: AllocatedWeek) => void;
+		titleFormat?: (w: AllocatedWeek) => string;
+	} = $props();
 
 	let el: HTMLDivElement;
 	let calendar = $state.raw<Calendar>();
@@ -26,25 +33,29 @@
 	};
 
 	function buildEvents(list: AllocatedWeek[]) {
-		return list.map((w) => ({
+		return list.map((w) => {
+			const title =
+			titleFormat?.(w) ??
+			(w.status === 'paid'
+				? `Paid · ${currency.format(w.cost)}`
+				: w.status === 'partial'
+					? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
+					: w.status === 'waiting_approval'
+						? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
+						: `Unpaid · ${currency.format(w.cost)}`);
+		return {
 			id: w.id,
 			start: w.dayStart,
 			// FullCalendar uses an exclusive end for all-day events.
 			end: addDays(w.dayEnd, 1),
 			allDay: true,
-			title:
-				w.status === 'paid'
-					? `Paid · ${currency.format(w.cost)}`
-					: w.status === 'partial'
-						? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
-						: w.status === 'waiting_approval'
-							? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
-							: `Unpaid · ${currency.format(w.cost)}`,
+			title,
 			backgroundColor: STATUS_COLOR[w.status],
 			borderColor: STATUS_COLOR[w.status],
 			textColor: '#fff',
-			extendedProps: { week: w }
-		}));
+				extendedProps: { week: w }
+			};
+		});
 	}
 
 	// For overlapping ranges, show the most urgent payment status on the day.
