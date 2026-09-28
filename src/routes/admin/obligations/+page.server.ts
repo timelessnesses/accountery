@@ -5,6 +5,10 @@ import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabas
 import { fail, redirect } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/admin';
 import { applicableObligationSql } from '$lib/server/billing';
+import {
+	getObligationCreationPauses,
+	obligationCreationActions
+} from '$lib/server/obligationCreation';
 
 type StudentWeek = {
 	email: string;
@@ -154,11 +158,13 @@ export const load = async ({ platform }) => {
 
 	return {
 		totalStudents: users.length,
+		creationPauses: await getObligationCreationPauses(accountingDatabase),
 		weeks
 	};
 };
 
 export const actions = {
+	...obligationCreationActions,
 	create: async ({ platform, request, locals }) => {
 		requireAdmin(locals.user);
 		const values = await readObligationForm(request);

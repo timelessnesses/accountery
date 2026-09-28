@@ -4,6 +4,7 @@
 	import type { PageProps } from './$types';
 	import PaymentCalendar from '$lib/PaymentCalendar.svelte';
 	import CalendarSync from '$lib/CalendarSync.svelte';
+	import AutomaticObligationControl from '$lib/AutomaticObligationControl.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Table from '$lib/components/ui/table';
 	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
@@ -78,6 +79,7 @@
 			</p>
 		</div>
 		<div class="flex flex-wrap gap-2">
+			<AutomaticObligationControl pauses={data.creationPauses} />
 			<Button onclick={() => (showCreateForm = !showCreateForm)}>Create new obligation</Button>
 			<Button
 				variant="outline"
