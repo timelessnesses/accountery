@@ -10,7 +10,7 @@
 
 	const { data } = $props();
 
-	const pendingTransactions = $derived(data.allPendingTransactions as Transaction[]);
+	const pendingTransactions = $derived(data.allPendingTransactions);
 	let updatingTransactionId = $state<number | undefined>();
 	let expandedTransactionId = $state<number | undefined>();
 	let verifyingTransactionId = $state<number | undefined>();
@@ -283,7 +283,7 @@ ${allChecksPassed ? '✅ All checks passed' : '❌ Some checks failed'}
 										class="text-primary underline-offset-4 hover:underline"
 										onclick={(event) => event.stopPropagation()}
 									>
-										{transaction.email}
+										{transaction.user_name}({transaction.email})
 									</a>
 								</Table.Cell>
 								<Table.Cell class="max-w-[320px] truncate">{transaction.description}</Table.Cell>
