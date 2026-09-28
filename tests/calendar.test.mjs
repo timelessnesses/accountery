@@ -69,6 +69,10 @@ const googleLogin = await import('../src/routes/api/auth/google-jwt/+server.ts')
 const { OAuth2Client } = await import('google-auth-library');
 const { newWeeklyObligations } = await import('../accounting-cron/src/obligations.ts');
 const { default: obligationWorker } = await import('../accounting-cron/src/index.ts');
+const { load: loadPublicObligations } =
+	await import('../src/routes/obligations-owed/+page.server.ts');
+const { getPublicObligationBalances, isPublicObligationsEnabled } =
+	await import('../src/lib/server/publicObligations.ts');
 const user = { email: 'test@example.com', name: 'Test', nickname: 'Test', admin: true };
 const origin = 'https://accounting.example.com';
 function fixture() {
@@ -89,6 +93,7 @@ function fixture() {
 		readFileSync(resolve(root, 'migrations/0015_departures_and_obligation_deletion.sql'), 'utf8')
 	);
 	sql.exec(readFileSync(resolve(root, 'migrations/0016_obligation_creation_pauses.sql'), 'utf8'));
+	sql.exec(readFileSync(resolve(root, 'migrations/0017_public_obligations.sql'), 'utf8'));
 	const database = {
 		prepare(query) {
 			const statement = sql.prepare(query);
@@ -744,5 +749,118 @@ test('actual scheduled worker honors a saved pause, then creates only one week a
 		sql.prepare('SELECT start_date FROM obligations').get().start_date,
 		parseDateInput('2026-10-04')
 	);
+	sql.close();
+});
+
+test('public balances are off by default and the switch guards both page loading and its data query', async () => {
+	const { sql, database, event } = billingFixture();
+	const headers = {};
+	const publicEvent = {
+		...event,
+		locals: {},
+		setHeaders: (value) => Object.assign(headers, value)
+	};
+	assert.equal(await isPublicObligationsEnabled(database), false);
+	assert.deepEqual(await getPublicObligationBalances(database), []);
+	await assert.rejects(loadPublicObligations(publicEvent), (e) => e.status === 404);
+	assert.equal(headers['Cache-Control'], 'no-store');
+	await actions.setPublicObligations({ ...event, request: request('POST', { enabled: '1' }) });
+	assert.equal((await loadObligations(event)).publicObligationsEnabled, true);
+	assert.equal((await loadPublicObligations(publicEvent)).balances.length, 2);
+	await actions.setPublicObligations({ ...event, request: request('POST', { enabled: '0' }) });
+	await assert.rejects(loadPublicObligations(publicEvent), (e) => e.status === 404);
+	assert.deepEqual(await getPublicObligationBalances(database), []);
+	assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM logs').get().n, 2);
+	sql.close();
+});
+
+test('public summaries keep pending separate, preserve departure cutoffs, and exclude private fields and settled/deleted users', async () => {
+	const { sql, event } = billingFixture();
+	sql.exec(`UPDATE users SET name='Admin name', nickname='Admin' WHERE email='test@example.com';
+		UPDATE users SET name='Departing student', nickname='Student', session_token='private-secret' WHERE email='left@tsu.ac.th';
+		INSERT INTO users (email,name,nickname) VALUES ('settled@tsu.ac.th','Settled','Done'),('deleted@tsu.ac.th','Deleted','Hidden');
+		UPDATE users SET deleted_at=1 WHERE email='deleted@tsu.ac.th';
+		INSERT INTO transactions (email,amount,approved,image,description) VALUES ('settled@tsu.ac.th',999,'approved','private-receipt','private-description');
+		UPDATE transactions SET image='private-receipt',description='private-description';`);
+	await setLeavingDate(departureEvent(event, 'left@tsu.ac.th', '2026-09-28'));
+	await actions.setPublicObligations({ ...event, request: request('POST', { enabled: '1' }) });
+	let data = await loadPublicObligations({ ...event, locals: {}, setHeaders() {} });
+	assert.deepEqual(
+		data.balances.map((row) => [row.name, row.owed, row.pending, row.pendingCount]),
+		[
+			['Admin name', 120, 0, 0],
+			['Departing student', 10, 5, 1]
+		]
+	);
+	for (const row of data.balances)
+		assert.deepEqual(
+			Object.keys(row).sort(),
+			['name', 'nickname', 'owed', 'pending', 'pendingCount'].sort()
+		);
+	assert.doesNotMatch(
+		JSON.stringify(data),
+		/@|private-secret|private-receipt|private-description|session_|left_at|deleted_at/
+	);
+	// Approval reduces the outstanding amount; pending remains separate until then.
+	sql.exec(
+		"UPDATE transactions SET approved='approved' WHERE email='left@tsu.ac.th' AND approved='pending'"
+	);
+	data = await loadPublicObligations({ ...event, locals: {}, setHeaders() {} });
+	assert.deepEqual(
+		{ ...data.balances.find((row) => row.name === 'Departing student') },
+		{ name: 'Departing student', nickname: 'Student', owed: 5, pending: 0, pendingCount: 0 }
+	);
+	// Deleting the earlier charge also removes that person from the public debt table.
+	await assert.rejects(
+		actions.delete({ ...event, request: request('POST', { id: '1' }) }),
+		(e) => e.status === 303
+	);
+	data = await loadPublicObligations({ ...event, locals: {}, setHeaders() {} });
+	assert.deepEqual(
+		data.balances.map((row) => row.name),
+		['Admin name']
+	);
+	sql.close();
+});
+
+test('only administrators can change public access and only the exact read-only route bypasses sign-in', async () => {
+	const { database, event, sql } = fixture();
+	for (const locals of [{}, { user: { ...user, admin: false } }]) {
+		await assert.rejects(
+			actions.setPublicObligations({
+				...event,
+				locals,
+				request: request('POST', { enabled: '1' })
+			}),
+			(e) => [401, 403].includes(e.status)
+		);
+	}
+	assert.equal(
+		(
+			await actions.setPublicObligations({
+				...event,
+				request: request('POST', { enabled: 'true' })
+			})
+		).status,
+		400
+	);
+	assert.equal(await isPublicObligationsEnabled(database), false);
+	async function route(path, method = 'GET') {
+		return handle({
+			event: {
+				...event,
+				locals: {},
+				cookies: { get: () => undefined },
+				url: new URL(path, origin),
+				request: new Request(new URL(path, origin), { method })
+			},
+			resolve: () => new Response('allowed')
+		});
+	}
+	for (const path of ['/obligations-owed', '/obligations-owed/__data.json'])
+		assert.equal(await (await route(path)).text(), 'allowed');
+	for (const path of ['/obligations-owed/private', '/obligations-owed-other', '/admin/obligations'])
+		await assert.rejects(route(path), (e) => e.status === 302);
+	await assert.rejects(route('/obligations-owed', 'POST'), (e) => e.status === 302);
 	sql.close();
 });

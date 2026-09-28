@@ -20,7 +20,8 @@
 		{
 			"binding": "AccountingDatabase",
 			"database_name": "accountingdb",
-			"database_id": "a91aeecd-0238-40c9-8506-0382f0ec850f"
+			"database_id": "a91aeecd-0238-40c9-8506-0382f0ec850f",
+			"remote": true
 		}
 	],
 	"r2_buckets": [

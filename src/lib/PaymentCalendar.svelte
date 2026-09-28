@@ -8,11 +8,13 @@
 	let {
 		weeks,
 		onselect,
-		titleFormat
+		titleFormat,
+		fitContent = false
 	}: {
 		weeks: AllocatedWeek[];
 		onselect?: (w: AllocatedWeek) => void;
 		titleFormat?: (w: AllocatedWeek) => string;
+		fitContent?: boolean;
 	} = $props();
 
 	let el: HTMLDivElement;
@@ -35,24 +37,24 @@
 	function buildEvents(list: AllocatedWeek[]) {
 		return list.map((w) => {
 			const title =
-			titleFormat?.(w) ??
-			(w.status === 'paid'
-				? `Paid · ${currency.format(w.cost)}`
-				: w.status === 'partial'
-					? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
-					: w.status === 'waiting_approval'
-						? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
-						: `Unpaid · ${currency.format(w.cost)}`);
-		return {
-			id: w.id,
-			start: w.dayStart,
-			// FullCalendar uses an exclusive end for all-day events.
-			end: addDays(w.dayEnd, 1),
-			allDay: true,
-			title,
-			backgroundColor: STATUS_COLOR[w.status],
-			borderColor: STATUS_COLOR[w.status],
-			textColor: '#fff',
+				titleFormat?.(w) ??
+				(w.status === 'paid'
+					? `Paid · ${currency.format(w.cost)}`
+					: w.status === 'partial'
+						? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
+						: w.status === 'waiting_approval'
+							? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
+							: `Unpaid · ${currency.format(w.cost)}`);
+			return {
+				id: w.id,
+				start: w.dayStart,
+				// FullCalendar uses an exclusive end for all-day events.
+				end: addDays(w.dayEnd, 1),
+				allDay: true,
+				title,
+				backgroundColor: STATUS_COLOR[w.status],
+				borderColor: STATUS_COLOR[w.status],
+				textColor: '#fff',
 				extendedProps: { week: w }
 			};
 		});
@@ -70,8 +72,8 @@
 		calendar = new Calendar(el, {
 			plugins: [dayGridPlugin, interactionPlugin],
 			initialView: 'dayGridMonth',
-			height: '100%',
-			expandRows: true,
+			height: fitContent ? 'auto' : '100%',
+			expandRows: !fitContent,
 			firstDay: 0,
 			headerToolbar: {
 				left: 'prev,next today',
@@ -79,6 +81,9 @@
 				right: ''
 			},
 			events: buildEvents(weeks),
+			eventDidMount: ({ el, event }) => {
+				el.title = event.title;
+			},
 			dayCellClassNames: (arg) => {
 				const iso = toISODate(arg.date);
 				return dayClass(weeks, iso);
@@ -107,4 +112,42 @@
 	onDestroy(() => calendar?.destroy());
 </script>
 
-<div bind:this={el} class="h-full w-full"></div>
+<div
+	bind:this={el}
+	class="w-full min-w-0"
+	class:h-full={!fitContent}
+	class:fit-content={fitContent}
+></div>
+
+<style>
+	.fit-content :global(.fc-toolbar) {
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+	.fit-content :global(.fc-toolbar-chunk:empty) {
+		display: none;
+	}
+	.fit-content :global(.fc-daygrid-day-frame) {
+		min-height: 5.5rem;
+	}
+	.fit-content :global(.fc-event-title) {
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+	.fit-content :global(.fc-event-main-frame) {
+		display: block;
+	}
+	.fit-content :global(.fc-daygrid-event) {
+		padding: 0.3rem 0.4rem;
+		line-height: 1.45;
+	}
+	@media (max-width: 480px) {
+		.fit-content :global(.fc-toolbar-title) {
+			font-size: 1rem;
+		}
+		.fit-content :global(.fc-button) {
+			padding: 0.3rem 0.45rem;
+			font-size: 0.8rem;
+		}
+	}
+</style>

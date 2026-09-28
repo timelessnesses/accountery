@@ -198,7 +198,7 @@
 		if (previewStudents.length === 0) return;
 		importing = true;
 
-		fetch('/admin/users/${userToChange?.email}/change-details', {
+		fetch(`/admin/users/${userToChange?.email}/change-details`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -221,12 +221,13 @@
 			});
 	}
 	let reportDialogOpen = $state(false);
-	let reportValue = $state('');
-	$effect(() => {
-		reportValue = '';
+	let reportValue = $derived.by(() => {
+		let report = '';
 		for (const user of data.transactionsFromUser.results) {
-			reportValue += `User: ${user.name} (${user.email}) - Paid: ${user.paid}, Owed: ${user.owed}, Net: ${user.net}\n`;
+			if (user.net === 0) continue;
+			report += `${user.nickname} (${user.name}) - Owed: ${Math.abs(user.net)} baht\n`;
 		}
+		return report;
 	});
 </script>
 
@@ -382,7 +383,7 @@
 				}}>Import Student Data</Button
 			>
 			<Button
-				onclick={()=> {}}>Report User's Balance As Text</Button>
+				onclick={()=> {reportDialogOpen = true}}>Report User's Balance As Text</Button>
 		{/snippet}
 	</DataTable>
 </div>
@@ -395,7 +396,7 @@
 	bind:this={fileInput}
 />
 
-<Dialog.Root open={reportDialogOpen}>
+<Dialog.Root bind:open={reportDialogOpen}>
 	<Dialog.Portal>
 		<Dialog.Overlay
 			class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm
@@ -412,7 +413,7 @@
 				data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95"
 		>
 			<Dialog.Title class="text-lg font-semibold">Report User's Balance As Text</Dialog.Title>
-			<textarea readonly class="w-full h-full rounded-md border bg-background p-2 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background" bind:value={reportValue}></textarea>
+			<textarea readonly class="w-full h-full rounded-md border bg-background p-2 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background" style:height="500px" bind:value={reportValue}></textarea>
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>

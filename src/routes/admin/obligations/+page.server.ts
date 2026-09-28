@@ -5,6 +5,7 @@ import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabas
 import { fail, redirect } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/admin';
 import { applicableObligationSql } from '$lib/server/billing';
+import { isPublicObligationsEnabled, publicObligationActions } from '$lib/server/publicObligations';
 import {
 	getObligationCreationPauses,
 	obligationCreationActions
@@ -158,12 +159,14 @@ export const load = async ({ platform }) => {
 
 	return {
 		totalStudents: users.length,
+		publicObligationsEnabled: await isPublicObligationsEnabled(accountingDatabase),
 		creationPauses: await getObligationCreationPauses(accountingDatabase),
 		weeks
 	};
 };
 
 export const actions = {
+	...publicObligationActions,
 	...obligationCreationActions,
 	create: async ({ platform, request, locals }) => {
 		requireAdmin(locals.user);
