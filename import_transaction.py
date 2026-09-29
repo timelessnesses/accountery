@@ -19,7 +19,7 @@ CF_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
 CF_DATABASE_ID = os.getenv("CLOUDFLARE_DATABASE_ID")
 
 QUERY_API = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/d1/database/{CF_DATABASE_ID}/query"
-PUT_API = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/r2/buckets/AccountingReceipts/objects/"
+PUT_API = f"https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/r2/buckets/accounting-receipts/objects/"
 
 file = io.StringIO(requests.get("https://docs.google.com/spreadsheets/d/1wQsOz3jN8ufSFZY3Vutx9-PmSYhecNvSBID783E-3AA/export?format=csv&gid=1850598011#gid=1850598011").content.decode('utf-8'))
 sqls = []
@@ -34,6 +34,11 @@ def already_imported(date: str, email: str, amount: str):
     except json.JSONDecodeError:
         print(f"Error decoding JSON: {result}")
         return False
+
+def do_upload_to_r2(file_path: io.BytesIO, object_name: str):
+    response = requests.put(PUT_API + object_name, headers={"Authorization": f"Bearer {CF_API_TOKEN}"}, data=file_path)
+    response.raise_for_status()
+
 def process_row(row: list):
     if row[0].isspace() or row[0] == '' or row[0] == "ประทับเวลา":
         return ""
@@ -52,14 +57,13 @@ def process_row(row: list):
                 if chunk:
                     temp_file.write(chunk)
         temp_file.seek(0)
-        subprocess.run(["pnpx", "wrangler", "r2", "object", "put", f"accounting-receipts/{transaction_date.isoformat()}-{student_id}.jpg", "--remote", "-f", temp_file.name], shell=True, check=True, capture_output=True)
-        # subprocess.run(["pnpx", "wrangler", "d1", "execute", "accountingdb", "--remote", f"""--command="INSERT INTO transactions (date, email, amount, image, description, type, approved) VALUES ({int(transaction_date.timestamp())},\"{student_id}\",{amount},\"/api/payments/{transaction_date.isoformat()}-{student_id}.jpg\",\"Imported from Google Drive\",\"payment\",\"pending\")" """], shell=True)
+        do_upload_to_r2(io.BytesIO(temp_file.read()), f"{transaction_date.isoformat()}-{student_id}.jpg")
         return f"INSERT INTO transactions (date, email, amount, image, description, type, approved) VALUES ({int(transaction_date.timestamp())},\"{student_id}\",{amount},\"/api/payments/{transaction_date.isoformat()}-{student_id}.jpg\",\"Imported from Google Drive\",\"payment\",\"pending\");"
 rows = list(csv.reader(file, delimiter=','))
 # print(rows)
 with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
     futures = [executor.submit(process_row, row) for row in rows]
-    for future in tqdm.tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
+    for future in tqdm.tqdm(concurrent.futures.as_completed(futures), total=len(futures), unit="student", desc="Processing rows", ):
         result = future.result()
         try:
             sqls.append(result)
@@ -68,4 +72,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
 
 with open('insert_transactions.sql', 'w', encoding='utf-8') as sql_file:
     sql_file.write("\n".join(sqls))
-subprocess.run(["pnpx", "wrangler", "d1", "execute", "accountingdb", "--remote", "--file", "insert_transactions.sql"], shell=True)
+
+print(
+    requests.post(QUERY_API, headers={"Authorization": f"Bearer {CF_API_TOKEN}"}, json={"sql": "\n".join(sqls)}).text
+)
