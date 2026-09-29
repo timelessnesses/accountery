@@ -15,7 +15,6 @@ export default defineConfig({
 	},
 	build: {
 		sourcemap: true,
-		chunkImportMap: true,
 		rolldownOptions: {
 			experimental: {
 				nativeMagicString: true
