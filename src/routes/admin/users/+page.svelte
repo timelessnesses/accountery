@@ -224,7 +224,7 @@
 	let reportValue = $derived.by(() => {
 		let report = '';
 		for (const user of data.transactionsFromUser.results) {
-			if (user.net === 0) continue;
+			if (user.net >= 0) continue;
 			report += `${user.nickname} (${user.name}) - Owed: ${Math.abs(user.net)} baht\n`;
 		}
 		return report;

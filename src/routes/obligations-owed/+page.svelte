@@ -176,7 +176,7 @@
 					></Table.Header
 				>
 				<Table.Body>
-					{#each rows as row}
+					{#each rows as row (row.name)}
 						<Table.Row class={row.pendingCount > 0 ? 'border-b-0' : ''}>
 							<Table.Cell class="pl-4 py-4 sm:pl-5"
 								><p class="break-words font-semibold">{row.name}</p>
