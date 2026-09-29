@@ -24,7 +24,7 @@ export async function getUserBalances(database: D1Database, email?: string) {
 	const query = database.prepare(`
 		WITH balances AS (
 			SELECT u.email, u.name, u.nickname, u.role, u.session_expiry,
-				u.logged_in_when, u.deleted_at, u.left_at,
+				u.logged_in_when, u.deleted_at, u.left_at, u.role,
 				(SELECT COALESCE(SUM(t.amount), 0) FROM transactions t
 					WHERE t.email = u.email AND t.approved = 'approved') AS paid,
 				(SELECT COALESCE(SUM(o.amount), 0) FROM obligations o
@@ -34,6 +34,7 @@ export async function getUserBalances(database: D1Database, email?: string) {
 		SELECT *, paid - owed AS net FROM balances ORDER BY email
 	`);
 	const result = await (email === undefined ? query : query.bind(email)).all<TransformedUser>();
+	console.log(result)
 	return {
 		...result,
 		results: result.results.map((user) => ({

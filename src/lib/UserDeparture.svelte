@@ -5,7 +5,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import type { User } from '$lib/types/AccountingDatabaseTypes';
 
-	const { user }: { user: Pick<User, 'email' | 'name' | 'left_at'> } = $props();
+	const { user }: { user: Pick<User, 'email' | 'name' | 'left_at' | 'role'> } = $props();
 	const inputId = $props.id();
 	let open = $state(false);
 	let leavingDate = $state('');
@@ -61,8 +61,11 @@
 			? 'bg-muted text-muted-foreground'
 			: 'bg-success/10 text-success'}"
 	>
-		{savedDate ? `Left · ${savedDate}` : 'Active'}
+		{savedDate ? `Left · ${savedDate}` : `Active`}
 	</span>
+	{#if user.role === "admin"}
+		<span class = "whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium bg-success/10 text-info">Admin</span>
+	{/if}
 	<Dialog.Root bind:open>
 		<Dialog.Trigger
 			onclick={edit}

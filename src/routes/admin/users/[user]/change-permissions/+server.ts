@@ -25,7 +25,7 @@ export const POST = async ({ locals, params, platform, request }) => {
             WHERE email = ?
         `
 		)
-		.bind(admin, params.user)
+		.bind(admin ? 'admin' : 'student', params.user)
 		.run();
 
 	await accountingDatabase

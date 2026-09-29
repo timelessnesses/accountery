@@ -3,7 +3,7 @@ export type User = {
 	email: string;
 	nickname: string;
 	session_expiry: Date | null;
-	role: 'user' | 'admin';
+	role: 'student' | 'admin';
 	logged_in_when: Date | null;
 	deleted_at: Date | null;
 	left_at: number | null;
