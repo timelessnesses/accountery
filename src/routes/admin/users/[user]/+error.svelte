@@ -1,11 +1,11 @@
-<!-- src/routes/+error.svelte -->
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
+	import AdminPageHeader from '$lib/admin/AdminPageHeader.svelte';
+	import Button from '$lib/components/ui/button/button.svelte';
 </script>
 
-<div class="flex min-h-screen flex-col items-center justify-center text-center">
-	<h1 class="text-8xl font-bold">{page.status}</h1>
-	<p class="text-muted-foreground mt-2">
-		{page.error?.message}
-	</p>
-</div>
+<main class="admin-page">
+	<AdminPageHeader title={`User unavailable (${page.status})`} description={page.error?.message} />
+	<div><Button href={resolve('/admin/users')} variant="outline">Back to users</Button></div>
+</main>

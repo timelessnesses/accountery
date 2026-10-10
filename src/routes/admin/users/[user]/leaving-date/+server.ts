@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { parseDateInput } from '$lib/date';
 import { requireAdmin } from '$lib/server/admin';
+import { auditLogStatement } from '$lib/server/auditLog';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ locals, platform, params, request, url }) => {
@@ -26,13 +27,11 @@ export const POST: RequestHandler = async ({ locals, platform, params, request, 
 			)
 			.bind(leftAt, params.user),
 		database.prepare('DELETE FROM calendar_tokens WHERE by_user = ?').bind(params.user),
-		database
-			.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
-			.bind(
-				admin.email,
-				`Set leaving date for ${params.user} to ${value}; sign-in disabled`,
-				Math.floor(Date.now() / 1000)
-			)
+		auditLogStatement(database, {
+			email: admin.email,
+			action: `Set leaving date for ${params.user} to ${value}; sign-in disabled`,
+			targets: [{ type: 'user', email: params.user }]
+		})
 	]);
 	return json({ ok: true });
 };

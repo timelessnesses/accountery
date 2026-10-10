@@ -17,7 +17,11 @@ export type Transaction = {
 	date: Date;
 	type: string;
 	image: string;
-	approved: 'approved' | 'pending' | 'rejected';
+	// voided is where transaction is wrongfully marked as something else. voided is just there to make it "not count towards rejected"
+	approved: 'approved' | 'pending' | 'rejected' | 'voided';
+	processor: string;
+	reject_reason: string;
+	void_reason: string;
 };
 
 export type Obligation = {
@@ -34,6 +38,8 @@ export type Log = {
 	action: string;
 	timestamp: number;
 	date: Date;
+	targets: string;
+	actor_type: 'user' | 'application';
 };
 
 export type StudentJWT = {

@@ -5,8 +5,7 @@
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 
-	// Replace this with your own payment QR image URL.
-	const QR_SRC = '/cropped-qr.jpg';
+	import PromptPayQr from '$lib/PromptPayQr.svelte';
 
 	let { selectedWeek, nextDue }: { selectedWeek?: AllocatedWeek; nextDue?: AllocatedWeek } =
 		$props();
@@ -17,6 +16,7 @@
 	let proofName = $state('');
 	let submitting = $state(false);
 	let justSaved = $state(false);
+	let automaticallyApproved = $state(false);
 
 	// Prefill amount with what's needed to clear the next due / selected week.
 	onMount(() => {
@@ -62,6 +62,8 @@
 				});
 				throw new Error('Payment save failed');
 			}
+			const result = (await response.json()) as { automaticallyApproved?: boolean };
+			automaticallyApproved = result.automaticallyApproved === true;
 
 			amount = null;
 			note = 'Paying Obligation';
@@ -89,27 +91,7 @@
 			{/if}
 		</div>
 		<div class="mt-4 flex flex-col items-center gap-3">
-			<button
-				type="button"
-				onclick={() => lightbox.open(QR_SRC, 'Payment QR code')}
-				class="flex h-44 w-44 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted transition hover:border-primary"
-				aria-label="Enlarge payment QR code"
-			>
-				<img
-					src={QR_SRC}
-					alt="Payment QR code"
-					class="h-full w-full object-contain"
-					onerror={(e) => ((e.currentTarget as HTMLImageElement).style.opacity = '0.25')}
-				/>
-			</button>
-			<p class="text-center text-xs leading-relaxed text-muted-foreground text-balance">
-				Tap the code to enlarge, scan it with your banking app, then upload your receipt below.
-			</p>
-			<p class="text-center text-xs leading-relaxed text-muted-foreground text-balance">
-				Bank: Kasikorn Bank<br />
-				Account Number: 233-2-85069-8<br />
-				Name: MR. TUKKAPOL PONGPUNNAMAI / นาย ตรรกพล พงศ์พรรณมัย
-			</p>
+			<PromptPayQr {amount} />
 		</div>
 	</div>
 
@@ -127,7 +109,8 @@
 					>
 					<input
 						type="number"
-						min="0"
+						min="0.01"
+						max="9999999999.99"
 						step="0.01"
 						bind:value={amount}
 						placeholder="0.00"
@@ -191,11 +174,19 @@
 				disabled={submitting || !amount || !note.trim() || !proof}
 				class="mt-1 inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
 			>
-				{justSaved ? 'Payment recorded' : 'Submit payment'}
+				{submitting
+					? 'Submitting and checking payment…'
+					: justSaved
+						? automaticallyApproved
+							? 'Payment approved'
+							: 'Payment recorded'
+						: 'Submit payment'}
 			</button>
 			{#if justSaved}
 				<p class="text-center text-xs font-medium text-success">
-					Calendar updated with your payment.
+					{automaticallyApproved
+						? 'Slip verified and payment approved. Your balance has been updated.'
+						: 'Payment saved and awaiting review.'}
 				</p>
 			{/if}
 		</div>

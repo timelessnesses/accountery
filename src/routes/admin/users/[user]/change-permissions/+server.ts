@@ -1,3 +1,5 @@
+import { auditLogStatement } from '$lib/server/auditLog';
+
 export const POST = async ({ locals, params, platform, request }) => {
 	if (!locals.user) {
 		throw new Response('Unauthorized', { status: 401 });
@@ -28,18 +30,14 @@ export const POST = async ({ locals, params, platform, request }) => {
 		.bind(admin ? 'admin' : 'student', params.user)
 		.run();
 
-	await accountingDatabase
-		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
-		.bind(
-			locals.user.email,
-			`Admin ${locals.user.email} changed user permissions for user: ${params.user}`,
-			Math.floor(Date.now() / 1000)
-		)
-		.run();
-
 	if (result.meta.changes === 0) {
 		throw new Response('User not found', { status: 404 });
 	}
+	await auditLogStatement(accountingDatabase, {
+		email: locals.user.email,
+		action: `Changed permissions for ${params.user} to ${admin ? 'admin' : 'student'}`,
+		targets: [{ type: 'user', email: params.user }]
+	}).run();
 
 	return new Response(JSON.stringify({ ok: true }), { status: 200 });
 };

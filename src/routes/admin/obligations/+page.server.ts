@@ -4,6 +4,7 @@ import type { AllocatedWeek } from '$lib/payments.svelte';
 import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabaseTypes';
 import { fail, redirect } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/admin';
+import { auditLogStatement } from '$lib/server/auditLog';
 import { applicableObligationSql } from '$lib/server/billing';
 import { isPublicObligationsEnabled, publicObligationActions } from '$lib/server/publicObligations';
 import {
@@ -169,7 +170,7 @@ export const actions = {
 	...publicObligationActions,
 	...obligationCreationActions,
 	create: async ({ platform, request, locals }) => {
-		requireAdmin(locals.user);
+		const admin = requireAdmin(locals.user);
 		const values = await readObligationForm(request);
 
 		if (!values.ok) {
@@ -177,20 +178,31 @@ export const actions = {
 		}
 
 		const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
-		await accountingDatabase
-			.prepare(
-				`
+		await accountingDatabase.batch([
+			accountingDatabase
+				.prepare(
+					`
                 INSERT INTO obligations (start_date, end_date, amount, description)
                 VALUES (?, ?, ?, ?)
             `
-			)
-			.bind(values.startDate, values.endDate, values.amount, values.description)
-			.run();
+				)
+				.bind(values.startDate, values.endDate, values.amount, values.description),
+			accountingDatabase
+				.prepare(
+					`INSERT INTO logs (email, action, timestamp, targets)
+				SELECT ?, ?, ?, json_array(json_object('type', 'obligation', 'id', last_insert_rowid()))`
+				)
+				.bind(
+					admin.email,
+					`Created obligation: ${values.description}`,
+					Math.floor(Date.now() / 1000)
+				)
+		]);
 
 		throw redirect(303, '/admin/obligations');
 	},
 	update: async ({ platform, request, locals }) => {
-		requireAdmin(locals.user);
+		const admin = requireAdmin(locals.user);
 		const form = await request.formData();
 		const id = Number(form.get('id'));
 		const values = parseObligationValues(form);
@@ -204,9 +216,10 @@ export const actions = {
 		}
 
 		const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
-		await accountingDatabase
-			.prepare(
-				`
+		await accountingDatabase.batch([
+			accountingDatabase
+				.prepare(
+					`
                 UPDATE obligations
                 SET start_date = ?,
                     end_date = ?,
@@ -214,9 +227,15 @@ export const actions = {
                     description = ?
                 WHERE id = ? AND deleted_at IS NULL
             `
-			)
-			.bind(values.startDate, values.endDate, values.amount, values.description, id)
-			.run();
+				)
+				.bind(values.startDate, values.endDate, values.amount, values.description, id),
+			auditLogStatement(accountingDatabase, {
+				email: admin.email,
+				action: `Updated obligation #${id}: ${values.description}`,
+				targets: [{ type: 'obligation', id }],
+				changedOnly: true
+			})
+		]);
 
 		throw redirect(303, '/admin/obligations');
 	},
@@ -238,9 +257,12 @@ export const actions = {
 			database
 				.prepare('UPDATE obligations SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL')
 				.bind(now, id),
-			database
-				.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
-				.bind(admin.email, `Deleted obligation #${id}`, now)
+			auditLogStatement(database, {
+				email: admin.email,
+				action: `Deleted obligation #${id}`,
+				targets: [{ type: 'obligation', id }],
+				changedOnly: true
+			})
 		]);
 		throw redirect(303, '/admin/obligations');
 	}

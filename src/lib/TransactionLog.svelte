@@ -24,7 +24,8 @@
 	const statusClass = {
 		approved: 'bg-success/10 text-success',
 		pending: 'bg-warning/10 text-warning',
-		rejected: 'bg-danger/10 text-danger'
+		rejected: 'bg-danger/10 text-danger',
+		voided: 'bg-muted/10 text-muted-foreground'
 	} as const;
 </script>
 
@@ -45,7 +46,7 @@
 							statusClass[p.approved]}
 						aria-hidden="true"
 					>
-						{#if p.approved === 'rejected'}
+						{#if p.approved === 'rejected' || p.approved === 'voided'}
 							<svg
 								width="14"
 								height="14"
@@ -89,7 +90,9 @@
 										? 'text-success'
 										: p.approved === 'pending'
 											? 'text-warning'
-											: 'text-danger')}>{currency.format(p.amount)}</span
+											: p.approved === 'rejected'
+												? 'text-danger'
+												: 'text-muted-foreground')}>{currency.format(p.amount)}</span
 							>
 							<span
 								class={'rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ' +
@@ -102,6 +105,14 @@
 						{#if p.description}
 							<p class="truncate text-xs text-muted-foreground/80">{p.description}</p>
 						{/if}
+						{#if p.approved === 'rejected' && p.reject_reason}<p class="mt-1 text-xs text-danger">
+								Reason: {p.reject_reason}
+							</p>{/if}
+						{#if p.approved === 'voided' && p.void_reason}<p
+								class="mt-1 text-xs text-muted-foreground"
+							>
+								Void reason: {p.void_reason}
+							</p>{/if}
 						{#if p.image}
 							<button
 								type="button"

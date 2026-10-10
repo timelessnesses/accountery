@@ -1,6 +1,9 @@
 <script lang="ts">
+	import AdminPageHeader from '$lib/admin/AdminPageHeader.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { positiveId } from '$lib/logTargets';
 	import Confirmation from '$lib/Confirmation.svelte';
 	import DataTable from '$lib/DataTable.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
@@ -12,6 +15,10 @@
 
 	let updating = $state(false);
 	let selectedDate = $state('');
+	const highlightedId = $derived(positiveId(page.url.searchParams.get('highlightTransactionId')));
+	$effect(() => {
+		if (highlightedId !== null) selectedDate = '';
+	});
 	const transactions = $derived(data.transactions as Transaction[]);
 	const filteredTransactions = $derived(
 		selectedDate
@@ -39,19 +46,39 @@
 			? 'bg-success/10 text-success'
 			: status === 'pending'
 				? 'bg-warning/10 text-warning'
-				: 'bg-danger/10 text-danger';
+				: status === 'voided'
+					? 'bg-muted text-muted-foreground'
+					: 'bg-danger/10 text-danger';
 	}
 
 	async function updateTransactions(
 		selectedTransactions: Transaction[],
-		approved: 'approved' | 'rejected'
+		approved: 'approved' | 'rejected' | 'voided'
 	) {
-		const pendingTransactions = selectedTransactions.filter((transaction) => {
-			return transaction.approved === 'pending';
+		const eligibleTransactions = selectedTransactions.filter((transaction) => {
+			return approved === 'voided'
+				? transaction.approved === 'approved' || transaction.approved === 'rejected'
+				: transaction.approved === 'pending';
 		});
+		closeConfirm();
 
-		if (pendingTransactions.length === 0) {
-			alert('No pending transactions selected');
+		if (eligibleTransactions.length === 0) {
+			alert(
+				approved === 'voided'
+					? 'Select approved or rejected transactions to void'
+					: 'No pending transactions selected'
+			);
+			return;
+		}
+		const reason =
+			approved === 'voided'
+				? window.prompt('Reason for voiding these transactions (required):')
+				: approved === 'rejected'
+					? window.prompt('Reason for rejection (optional):')
+					: '';
+		if (reason === null) return;
+		if (approved === 'voided' && !reason.trim()) {
+			alert('A void reason is required');
 			return;
 		}
 
@@ -65,18 +92,24 @@
 				},
 				body: JSON.stringify({
 					approved,
-					transactionIds: pendingTransactions.map((transaction) => transaction.id)
+					reason,
+					transactionIds: eligibleTransactions.map((transaction) => transaction.id)
 				})
 			});
 
 			if (!response.ok) {
 				throw new Error(await response.text());
 			}
+			const result = (await response.json()) as { changed: number };
+			if (!result.changed)
+				alert('No transactions changed. Their status may have changed; the list will refresh.');
 
 			await invalidateAll();
 		} catch (err) {
 			console.error(err);
-			alert(`Failed to ${approved === 'approved' ? 'approve' : 'deny'} selected transactions`);
+			alert(
+				`Failed to ${approved === 'approved' ? 'approve' : approved === 'voided' ? 'void' : 'deny'} selected transactions`
+			);
 		} finally {
 			updating = false;
 		}
@@ -87,23 +120,23 @@
 		transactionsToUpdate = [];
 		approvedStatusToUpdate = 'approved';
 	}
-	let transactionsToUpdate: Transaction[] = [];
-	let approvedStatusToUpdate: 'approved' | 'rejected' = $state('approved');
-	function confirmationDoing(transactions: Transaction[], approved: 'approved' | 'rejected') {
+	let transactionsToUpdate: Transaction[] = $state([]);
+	let approvedStatusToUpdate: 'approved' | 'rejected' | 'voided' = $state('approved');
+	function confirmationDoing(
+		transactions: Transaction[],
+		approved: 'approved' | 'rejected' | 'voided'
+	) {
 		confirm = true;
 		transactionsToUpdate = transactions;
 		approvedStatusToUpdate = approved;
 	}
 </script>
 
-<main class="mx-auto w-full max-w-7xl space-y-4 p-4 sm:p-6">
-	<div class="flex flex-wrap items-end justify-between gap-3">
-		<div>
-			<h1 class="text-lg font-semibold text-foreground">Transactions</h1>
-			<p class="text-sm text-muted-foreground">
-				{filteredTransactions.length} shown · {transactions.length} total transactions
-			</p>
-		</div>
+<main class="admin-page">
+	<AdminPageHeader
+		title="Transactions"
+		description={`${filteredTransactions.length} shown ? ${transactions.length} total transactions`}
+	>
 		<label class="space-y-1 text-sm">
 			<span class="font-medium text-muted-foreground">Transaction date</span>
 			<div class="flex gap-2">
@@ -117,12 +150,36 @@
 				</Button>
 			</div>
 		</label>
-	</div>
+	</AdminPageHeader>
+	{#if highlightedId !== null}
+		<div
+			class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm"
+			role="status"
+		>
+			<p>
+				{transactions.some((tx) => tx.id === highlightedId)
+					? `Transaction #${highlightedId} opened from activity.`
+					: `Transaction #${highlightedId} is no longer available.`}
+			</p>
+			<a href={resolve('/admin/transactions')} class="text-primary hover:underline"
+				>Clear highlight</a
+			>
+		</div>
+	{/if}
 
 	<DataTable
 		data={filteredTransactions}
-		searchKeys={['email', 'description', 'type', 'approved']}
+		searchKeys={[
+			'email',
+			'description',
+			'type',
+			'approved',
+			'processor',
+			'reject_reason',
+			'void_reason'
+		]}
 		key={(tx) => tx.id}
+		highlightKey={highlightedId}
 		selectable
 	>
 		{#snippet header()}
@@ -133,6 +190,7 @@
 			<Table.Head>Date</Table.Head>
 			<Table.Head class="text-right">Amount</Table.Head>
 			<Table.Head class="text-right">Status</Table.Head>
+			<Table.Head>Processed by</Table.Head>
 		{/snippet}
 
 		{#snippet row(transaction)}
@@ -158,15 +216,34 @@
 					{transaction.approved}
 				</span>
 			</Table.Cell>
+			<Table.Cell>
+				{#if transaction.processor?.includes('@')}
+					<a
+						href={resolve(`/admin/users/${transaction.processor}`)}
+						class="text-primary hover:underline"
+						onclick={(event) => event.stopPropagation()}>{transaction.processor}</a
+					>
+				{:else}
+					{transaction.processor || 'Unassigned'}
+				{/if}
+			</Table.Cell>
 		{/snippet}
 
 		{#snippet detail(transaction)}
+			{#if transaction.reject_reason}<p class="mb-3 text-sm">
+					<strong>Rejection reason:</strong>
+					{transaction.reject_reason}
+				</p>{/if}
+			{#if transaction.void_reason}<p class="mb-3 text-sm">
+					<strong>Void reason:</strong>
+					{transaction.void_reason}
+				</p>{/if}
 			{#if transaction.image}
 				<div class="flex flex-col gap-3 sm:flex-row sm:items-start">
 					<a
 						href={transaction.image}
 						target="_blank"
-						rel="noreferrer"
+						rel="external noreferrer"
 						class="block w-full max-w-sm rounded-md border border-border bg-background p-2 transition hover:border-primary"
 					>
 						<img
@@ -206,6 +283,13 @@
 				>
 					Deny
 				</Button>
+				<Button
+					size="sm"
+					variant="outline"
+					disabled={updating ||
+						(transaction.approved !== 'approved' && transaction.approved !== 'rejected')}
+					onclick={() => confirmationDoing([transaction], 'voided')}>Void</Button
+				>
 			</div>
 		{/snippet}
 
@@ -227,6 +311,14 @@
 				>
 					Deny all {selected.length} Transaction{selected.length > 1 ? 's' : ''}
 				</Button>
+				<Button
+					size="sm"
+					variant="outline"
+					disabled={updating ||
+						disabled ||
+						!selected.some((tx) => tx.approved === 'approved' || tx.approved === 'rejected')}
+					onclick={() => confirmationDoing(selected, 'voided')}>Void processed transactions</Button
+				>
 			</div>
 		{/snippet}
 
@@ -237,7 +329,9 @@
 <Confirmation
 	show={confirm}
 	title="Confirm"
-	description="Are you sure you want to {approvedStatusToUpdate} these transactions?"
+	description={approvedStatusToUpdate === 'voided'
+		? 'Void the selected approved or rejected transactions? They will stop counting toward balances and rejected totals. You will be asked for a reason.'
+		: `Set the selected pending transactions to ${approvedStatusToUpdate}?`}
 	confirm={() => {
 		updateTransactions(transactionsToUpdate, approvedStatusToUpdate);
 	}}

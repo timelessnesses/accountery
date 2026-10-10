@@ -7,4 +7,5 @@ export const load = async ({ locals }) => {
 	if (!locals.user.admin) {
 		return redirect(307, '/');
 	}
+	return { user: locals.user };
 };

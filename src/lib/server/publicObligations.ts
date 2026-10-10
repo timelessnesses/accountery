@@ -1,6 +1,7 @@
 import { fail, type Actions } from '@sveltejs/kit';
 import { applicableObligationSql } from './billing';
 import { requireAdmin } from './admin';
+import { auditLogStatement } from './auditLog';
 
 export type PublicObligationBalance = {
 	name: string;
@@ -59,13 +60,11 @@ export const publicObligationActions = {
 				ON CONFLICT(key) DO UPDATE SET value = excluded.value`
 				)
 				.bind(value),
-			database
-				.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
-				.bind(
-					admin.email,
-					`${value === '1' ? 'Enabled' : 'Disabled'} the public obligations owed page`,
-					Math.floor(Date.now() / 1000)
-				)
+			auditLogStatement(database, {
+				email: admin.email,
+				action: `${value === '1' ? 'Enabled' : 'Disabled'} the public obligations owed page`,
+				targets: [{ type: 'settings', section: 'public-obligations' }]
+			})
 		]);
 		return { ok: true } as const;
 	}

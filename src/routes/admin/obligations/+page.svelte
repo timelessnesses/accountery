@@ -1,6 +1,10 @@
 <script lang="ts">
+	import AdminPageHeader from '$lib/admin/AdminPageHeader.svelte';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
+	import { positiveId } from '$lib/logTargets';
+	import { auditFocus } from '$lib/auditFocus';
 	import type { PageProps } from './$types';
 	import PaymentCalendar from '$lib/PaymentCalendar.svelte';
 	import CalendarSync from '$lib/CalendarSync.svelte';
@@ -31,8 +35,13 @@
 	const { data, form }: PageProps = $props();
 
 	const weeks = $derived(data.weeks as ObligationWeek[]);
-	let selectedId = $state<string>();
-	const selectedWeek = $derived(weeks.find((week) => week.id === selectedId) ?? weeks[0]);
+	const highlightedId = $derived(positiveId(page.url.searchParams.get('highlightObligationId')));
+	const highlightedSetting = $derived(page.url.searchParams.get('highlightSetting'));
+	let selectedId = $derived(highlightedId === null ? undefined : String(highlightedId));
+	const selectedWeek = $derived(
+		weeks.find((week) => week.id === selectedId) ??
+			(highlightedId !== null && selectedId === String(highlightedId) ? undefined : weeks[0])
+	);
 	let showCreateForm = $state(false);
 	let showEditForm = $state(false);
 	let deleteWeek = $state<ObligationWeek | null>(null);
@@ -82,16 +91,19 @@
 	}
 </script>
 
-<main class="mx-auto flex min-h-dvh min-w-0 w-full max-w-7xl flex-col gap-6 p-4 sm:p-6">
-	<div class="flex flex-wrap items-center justify-between gap-3">
-		<div>
-			<h1 class="text-lg font-semibold text-foreground">Obligations</h1>
-			<p class="text-sm text-muted-foreground">
-				{weeks.length} obligations · {data.totalStudents} students
-			</p>
-		</div>
+<main class="admin-page">
+	<AdminPageHeader
+		title="Obligations"
+		description={`${weeks.length} obligations ? ${data.totalStudents} students`}
+	>
 		<div class="flex flex-wrap gap-2">
-			<AutomaticObligationControl pauses={data.creationPauses} />
+			<div
+				tabindex="-1"
+				data-audit-highlight={highlightedSetting === 'creation-pauses' ? '' : undefined}
+				use:auditFocus={highlightedSetting === 'creation-pauses'}
+			>
+				<AutomaticObligationControl pauses={data.creationPauses} />
+			</div>
 			<Button onclick={() => (showCreateForm = !showCreateForm)}>Create new obligation</Button>
 			<Button
 				variant="outline"
@@ -103,14 +115,25 @@
 			<Button
 				variant="destructive"
 				disabled={!selectedWeek}
-				onclick={() => (deleteWeek = selectedWeek)}
+				onclick={() => (deleteWeek = selectedWeek ?? null)}
 			>
 				Delete selected obligation
 			</Button>
 		</div>
-	</div>
+	</AdminPageHeader>
 
-	<PublicObligationsSwitch enabled={data.publicObligationsEnabled} />
+	<div
+		tabindex="-1"
+		data-audit-highlight={highlightedSetting === 'public-obligations' ? '' : undefined}
+		use:auditFocus={highlightedSetting === 'public-obligations'}
+	>
+		<PublicObligationsSwitch enabled={data.publicObligationsEnabled} />
+	</div>
+	{#if highlightedId !== null && !weeks.some((week) => week.id === String(highlightedId))}
+		<p role="status" class="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+			Obligation #{highlightedId} has been deleted or is no longer available. Its audit history is retained.
+		</p>
+	{/if}
 
 	{#if form && !form.ok}
 		<p role="alert" class="rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
@@ -304,6 +327,7 @@
 				<Table.Body>
 					{#each weeks as week (week.id)}
 						<Table.Row
+							data-audit-highlight={week.id === String(highlightedId) ? '' : undefined}
 							tabindex={0}
 							role="button"
 							aria-pressed={selectedWeek?.id === week.id}
@@ -344,7 +368,12 @@
 			</Table.Root>
 		</div>
 
-		<aside class="rounded-md border border-border bg-card">
+		<aside
+			class="rounded-md border border-border bg-card"
+			tabindex="-1"
+			data-audit-highlight={selectedWeek?.id === String(highlightedId) ? '' : undefined}
+			use:auditFocus={selectedWeek?.id === String(highlightedId)}
+		>
 			{#if selectedWeek}
 				<div class="border-b border-border p-4">
 					<p class="text-xs font-medium text-muted-foreground">Selected obligation</p>

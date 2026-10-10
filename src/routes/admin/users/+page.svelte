@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AdminPageHeader from '$lib/admin/AdminPageHeader.svelte';
 	import DataTable from '$lib/DataTable.svelte';
 	import * as DropDownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Button } from '$lib/components/ui/button';
@@ -71,7 +72,7 @@
 				workbook.Sheets[workbook.SheetNames[sheetNumber - 1] || workbook.SheetNames[0]];
 			sheetRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as unknown[][];
 
-			console.log(sheetRows);
+			// console.log(sheetRows);
 
 			idColumn = '';
 			nameColumn = '';
@@ -231,8 +232,11 @@
 	});
 </script>
 
-<h1>Users</h1>
-<div style="height: 100%">
+<main class="admin-page">
+	<AdminPageHeader
+		title="Users"
+		description={`${data.transactionsFromUser.results.length} users. Manage memberships, permissions, and balances.`}
+	/>
 	<DataTable
 		data={data.transactionsFromUser.results}
 		searchKeys={['name', 'email']}
@@ -383,10 +387,13 @@
 				}}>Import Student Data</Button
 			>
 			<Button
-				onclick={()=> {reportDialogOpen = true}}>Report User's Balance As Text</Button>
+				onclick={() => {
+					reportDialogOpen = true;
+				}}>Report User's Balance As Text</Button
+			>
 		{/snippet}
 	</DataTable>
-</div>
+</main>
 
 <input
 	type="file"
@@ -413,7 +420,12 @@
 				data-[state=closed]:animate-out data-[state=closed]:fade-out data-[state=closed]:zoom-out-95"
 		>
 			<Dialog.Title class="text-lg font-semibold">Report User's Balance As Text</Dialog.Title>
-			<textarea readonly class="w-full h-full rounded-md border bg-background p-2 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background" style:height="500px" bind:value={reportValue}></textarea>
+			<textarea
+				readonly
+				class="w-full h-full rounded-md border bg-background p-2 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+				style:height="500px"
+				bind:value={reportValue}
+			></textarea>
 		</Dialog.Content>
 	</Dialog.Portal>
 </Dialog.Root>

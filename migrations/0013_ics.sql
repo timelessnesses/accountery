@@ -4,4 +4,4 @@ CREATE TABLE calendar_tokens (
     token TEXT NOT NULL UNIQUE,
     created_at INTEGER NOT NULL,
     by_user TEXT NOT NULL REFERENCES users(email) ON DELETE CASCADE
-)
+);

@@ -43,48 +43,37 @@ type SlipOkResponseObject = {
 export type SlipOkResponse =
 	| {
 			// Request Success
-			success: false;
-			data: SlipOkResponseObject;
+			success?: false;
+			data?: SlipOkResponseObject;
+			code?: number;
+			message?: string;
 	  }
 	| {
 			success: true;
 			data: SlipOkResponseObject;
 	  };
 
-/**
- *
- * @param slipImage - A URL to R2's direct path
- */
+/** Verify receipt bytes with SlipOK; recipient and duplicate checks live in D1. */
 export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise<SlipOkResponse> {
-	console.log('Checking slip with SlipOK API:', arrayBufferToBase64(slipImage), amount);
 	const apiKey = env.SLIP_OK_API_KEY;
 	const apiEndpoint = env.SLIP_OK_API_ENDPOINT;
 	if (!apiKey || !apiEndpoint) {
 		throw new Error('SlipOK API key or endpoint is not set in environment variables.');
 	}
+	const body = new FormData();
+	body.set('files', new Blob([slipImage], { type: 'image/png' }), 'receipt.png');
+	// log:true also enforces the receiving account configured in SlipOK's LIFF.
+	// Our receiving account is configured in transfer_promptpay instead.
+	body.set('log', 'false');
+	body.set('amount', String(amount));
 	const a = await fetch(apiEndpoint, {
 		method: 'POST',
+		signal: AbortSignal.timeout(15000),
 		headers: {
-			'X-Authorization': `${apiKey}`,
-			'Content-Type': 'application/json'
+			'X-Authorization': apiKey
 		},
-		body: JSON.stringify({
-			files: arrayBufferToBase64(slipImage),
-			log: true,
-			amount
-		})
+		body
 	});
 	const response = await a.json<SlipOkResponse>();
 	return response;
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-	let binary = '';
-	const bytes = new Uint8Array(buffer);
-
-	for (let i = 0; i < bytes.length; i++) {
-		binary += String.fromCharCode(bytes[i]);
-	}
-
-	return btoa(binary);
 }

@@ -2,6 +2,8 @@
 	import type { Snippet } from 'svelte';
 	import * as Table from './components/ui/table';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { tick, untrack } from 'svelte';
+	import { focusAuditElement } from '$lib/auditFocus';
 
 	type Props = {
 		data: T[];
@@ -9,6 +11,9 @@
 		onSearchFinished?: (search: string) => void;
 		key: (item: T) => string | number;
 		selectable?: boolean;
+		showSearch?: boolean;
+		emptyMessage?: string;
+		highlightKey?: string | number | null;
 
 		header: Snippet;
 		row: Snippet<[T]>;
@@ -23,6 +28,9 @@
 		searchKeys = [],
 		onSearchFinished,
 		selectable = false,
+		showSearch = true,
+		emptyMessage = 'No matching records.',
+		highlightKey = null,
 		key,
 
 		header,
@@ -35,6 +43,24 @@
 	let search = $state('');
 	let selected = new SvelteSet<ReturnType<typeof key>>();
 	let expanded = $state<ReturnType<typeof key> | undefined>();
+	let container: HTMLDivElement;
+	$effect(() => {
+		const target = highlightKey;
+		if (target === null) return;
+		search = '';
+		expanded = untrack(() => (detail ? target : undefined));
+		let cancelled = false;
+		void tick().then(() => {
+			if (cancelled || !container) return;
+			const row = Array.from(container.querySelectorAll<HTMLElement>('[data-record-key]')).find(
+				(node) => node.dataset.recordKey === String(target)
+			);
+			if (row) focusAuditElement(row);
+		});
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	$effect(() => {
 		const value = search;
@@ -97,23 +123,30 @@
 	});
 </script>
 
-<div class="space-y-4" style="height: auto;">
-	<div class="flex items-center gap-2">
-		<input bind:value={search} placeholder="Search..." class="w-full rounded-md border px-3 py-2" />
-		{#if bulkActions}
-			<div class="shrink-0">
-				{@render bulkActions(selectedItems, selectedItems.length === 0)}
-			</div>
-		{/if}
-	</div>
-	<div class="overflow-x-auto">
-		<div class="rounded-md border">
+<div class="min-w-0 space-y-4" bind:this={container}>
+	{#if showSearch || bulkActions}
+		<div class="flex flex-wrap items-center gap-2">
+			{#if showSearch}<input
+					aria-label="Search records"
+					bind:value={search}
+					placeholder="Search records…"
+					class="min-w-0 flex-1 rounded-md border bg-background px-3 py-2"
+				/>{/if}
+			{#if bulkActions}
+				<div class="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+					{@render bulkActions(selectedItems, selectedItems.length === 0)}
+				</div>
+			{/if}
+		</div>
+	{/if}
+	<div class="min-w-0 overflow-x-auto">
+		<div class="overflow-hidden rounded-xl border bg-card">
 			<Table.Root class="w-full">
 				<Table.Header>
 					<Table.Row>
 						{#if selectable}
 							<Table.Head class="w-10">
-								<input type="checkbox" bind:checked={selectAll} />
+								<input type="checkbox" aria-label="Select all records" bind:checked={selectAll} />
 							</Table.Head>
 						{/if}
 
@@ -128,6 +161,9 @@
 				<Table.Body>
 					{#each filteredData as item, index (key(item))}
 						<Table.Row
+							data-record-key={String(key(item))}
+							data-audit-highlight={String(key(item)) === String(highlightKey) ? '' : undefined}
+							tabindex={String(key(item)) === String(highlightKey) ? -1 : undefined}
 							class={(index % 2 === 0 ? 'bg-background' : 'bg-muted/20') +
 								(detail ? ' cursor-pointer' : '')}
 							aria-expanded={detail ? expanded === key(item) : undefined}
@@ -137,6 +173,7 @@
 								<Table.Cell onclick={(event) => event.stopPropagation()}>
 									<input
 										type="checkbox"
+										aria-label={`Select record ${key(item)}`}
 										checked={selected.has(key(item))}
 										onchange={() => toggleRow(item)}
 									/>
@@ -158,6 +195,12 @@
 								</Table.Cell>
 							</Table.Row>
 						{/if}
+					{:else}
+						<Table.Row
+							><Table.Cell colspan={999} class="h-32 text-center text-muted-foreground"
+								>{emptyMessage}</Table.Cell
+							></Table.Row
+						>
 					{/each}
 				</Table.Body>
 			</Table.Root>
