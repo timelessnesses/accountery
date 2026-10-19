@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { env } from '$env/dynamic/public';
 	let loginError = $state('');
 	function handleLoginRequest(response: { credential: string }) {
 		loginError = '';
-		fetch('/api/auth/google-jwt', {
+		fetch(resolve('/api/auth/google-jwt'), {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
@@ -24,7 +25,7 @@
 						result?.message ?? result?.error ?? 'Failed to sign in with Google. Please try again.'
 					);
 				}
-				window.location.href = '/';
+				window.location.href = resolve('/');
 			})
 			.catch((err) => {
 				console.error('Error during Google sign-in:', err);

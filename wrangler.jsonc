@@ -38,7 +38,13 @@
 		}
 	],
 	"queues": {
-		"consumers": [],
+		"consumers": [
+			{
+				"queue": "notification",
+				"max_batch_size": 10,
+				"max_retries": 3
+			}
+		],
 		"producers": [
 			{
 				"queue": "notification",

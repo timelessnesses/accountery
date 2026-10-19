@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import AdminPageHeader from '$lib/admin/AdminPageHeader.svelte';
 	import DataTable from '$lib/DataTable.svelte';
 	import * as DropDownMenu from '$lib/components/ui/dropdown-menu/index.js';
@@ -109,7 +110,7 @@
 		if (previewStudents.length === 0) return;
 		importing = true;
 
-		fetch('/admin/users/import-students', {
+		fetch(resolve('/admin/users/import-students'), {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ students: previewStudents })
@@ -134,7 +135,7 @@
 	let changeToAdmin = $state(false);
 
 	function makeAdmin(user: TransformedUser, changeToAdmin: boolean) {
-		fetch(`/admin/users/${user.email}/change-permissions`, {
+		fetch(resolve('/admin/users/[user]/change-permissions', { user: user.email }), {
 			method: 'POST',
 			body: JSON.stringify({
 				admin: changeToAdmin
@@ -151,7 +152,7 @@
 	}
 	let showDeleteConfirm = $state(false);
 	function deleteUser(user: TransformedUser) {
-		fetch(`/admin/users/${user.email}/delete`, {
+		fetch(resolve('/admin/users/[user]/delete', { user: user.email }), {
 			method: 'POST'
 		})
 			.then((r) => {
@@ -168,7 +169,7 @@
 	function deleteUsers(users: TransformedUser[]) {
 		Promise.all(
 			users.map((user) => {
-				return fetch(`/admin/users/${user.email}/delete`, {
+				return fetch(resolve('/admin/users/[user]/delete', { user: user.email }), {
 					method: 'POST'
 				});
 			})
@@ -199,7 +200,7 @@
 		if (previewStudents.length === 0) return;
 		importing = true;
 
-		fetch(`/admin/users/${userToChange?.email}/change-details`, {
+		fetch(resolve(`/admin/users/${userToChange?.email}/change-details`), {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -286,13 +287,13 @@
 					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
 						onclick={() => {
-							window.open(`/admin/users/${user.email}`, '_blank');
+							window.open(resolve('/admin/users/[user]', { user: user.email }), '_blank');
 						}}>View Details</DropDownMenu.Item
 					>
 					<!-- <DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
 						onclick={() => {
-							fetch(`/admin/users/${user.email}/reset-session`, {
+							fetch(resolve('/admin/users/[user]/reset-session', { user: user.email }), {
 								method: 'POST'
 							})
 								.then((r) => {
@@ -355,7 +356,7 @@
 					const emails = selected.map((user: TransformedUser) => user.email);
 					Promise.all(
 						emails.map((email) => {
-							return fetch(`/admin/users/${email}/reset-session`, {
+							return fetch(resolve('/admin/users/[user]/reset-session', { user: email }), {
 								method: 'POST'
 							});
 						})

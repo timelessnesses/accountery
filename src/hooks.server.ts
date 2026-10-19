@@ -1,9 +1,10 @@
+import { base, resolve } from '$app/paths';
 import { verifyJWT } from '$lib/auth';
 import { redirect, type Handle } from '@sveltejs/kit';
 
 const publicRoutes = ['/login', '/api/auth/google-jwt', '/api/auth/logout'];
 
-export const handle: Handle = async ({ event, resolve }) => {
+export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
 	const env = event.platform?.env as Env;
 	const token = event.cookies.get('token');
 	if (token) {
@@ -17,11 +18,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 				console.error('Error verifying session token:', error);
 				event.locals.user = undefined;
 				event.cookies.set('token', '', { path: '/', expires: new Date(0) });
-				/* return redirect(302, "/login"); */
 			}
 		}
 	}
-	const path = event.url.pathname;
+	const path = event.url.pathname.slice(base.length);
 	const isCalendarFeed =
 		/^\/api\/calendar\/[a-f0-9]{64}$/.test(path) &&
 		(event.request.method === 'GET' || event.request.method === 'HEAD');
@@ -31,7 +31,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const isPublic =
 		isCalendarFeed || isPublicBalances || publicRoutes.some((r) => path.startsWith(r));
 	if (!isPublic && !event.locals.user) {
-		return redirect(302, '/login');
+		return redirect(302, resolve('/login'));
 	}
-	return resolve(event);
+	return resolveRequest(event);
 };

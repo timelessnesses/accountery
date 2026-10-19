@@ -1,3 +1,4 @@
+import { resolve } from '$app/paths';
 import { error, json } from '@sveltejs/kit';
 import { requireCalendarUser } from '$lib/server/obligationCalendar';
 import type { RequestHandler } from './$types';
@@ -16,7 +17,11 @@ export const GET: RequestHandler = async ({ platform, locals, url }) => {
 		.bind(email)
 		.first<{ token: string }>();
 	return json(
-		{ url: existing ? `${url.origin}/api/calendar/${existing.token}` : null },
+		{
+			url: existing
+				? new URL(resolve('/api/calendar/[token]', { token: existing.token }), url).href
+				: null
+		},
 		{ headers }
 	);
 };
@@ -39,7 +44,7 @@ export const POST: RequestHandler = async ({ platform, locals, url, request }) =
 			.bind(token, Math.floor(Date.now() / 1000), email)
 			.run();
 	}
-	return json({ url: `${url.origin}/api/calendar/${token}` }, { headers });
+	return json({ url: new URL(resolve('/api/calendar/[token]', { token }), url).href }, { headers });
 };
 
 export const DELETE: RequestHandler = async ({ platform, locals, request, url }) => {

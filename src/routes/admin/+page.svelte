@@ -212,7 +212,7 @@
 												class="block w-full max-w-sm rounded-md border border-border bg-background p-2 transition hover:border-primary"
 											>
 												<img
-													src={transaction.image}
+													src={resolve(transaction.image as `/api/payments/${string}`)}
 													alt="Bank slip for transaction #{transaction.id}"
 													class="max-h-[480px] w-full rounded object-contain"
 												/>

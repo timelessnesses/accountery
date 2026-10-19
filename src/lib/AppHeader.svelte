@@ -34,9 +34,9 @@
 		if (signingOut) return;
 		signingOut = true;
 		try {
-			const response = await fetch('/api/auth/logout', { method: 'POST' });
+			const response = await fetch(resolve('/api/auth/logout'), { method: 'POST' });
 			if (!response.ok) {
-				fetch(`/api/auth/verify-user`, { method: 'GET' }).then((res) => {
+				fetch(resolve('/api/auth/verify-user'), { method: 'GET' }).then((res) => {
 					if (!res.ok) {
 						goto(resolve('/login'));
 					}

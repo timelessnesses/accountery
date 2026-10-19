@@ -2,6 +2,7 @@ import { obligationDates, parseDateInput, unixTimestampToDate } from '$lib/date'
 import { buildAllocatedWeeks } from '$lib/paymentAlloc';
 import type { AllocatedWeek } from '$lib/payments.svelte';
 import type { Obligation, Transaction, User } from '$lib/types/AccountingDatabaseTypes';
+import { resolve } from '$app/paths';
 import { fail, redirect } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/admin';
 import { auditLogStatement } from '$lib/server/auditLog';
@@ -199,7 +200,7 @@ export const actions = {
 				)
 		]);
 
-		throw redirect(303, '/admin/obligations');
+		throw redirect(303, resolve('/admin/obligations'));
 	},
 	update: async ({ platform, request, locals }) => {
 		const admin = requireAdmin(locals.user);
@@ -237,7 +238,7 @@ export const actions = {
 			})
 		]);
 
-		throw redirect(303, '/admin/obligations');
+		throw redirect(303, resolve('/admin/obligations'));
 	},
 	delete: async ({ platform, request, locals }) => {
 		const admin = requireAdmin(locals.user);
@@ -264,7 +265,7 @@ export const actions = {
 				changedOnly: true
 			})
 		]);
-		throw redirect(303, '/admin/obligations');
+		throw redirect(303, resolve('/admin/obligations'));
 	}
 };
 

@@ -53,3 +53,10 @@ export type TransformedUser = {
 	owed: number;
 	net: number;
 } & User;
+
+export type Notification = {
+	endpoint: string;
+	email: string;
+	p256dh: string;
+	auth: string;
+}

@@ -1,3 +1,4 @@
+import { resolve } from '$app/paths';
 import { buildAllocatedWeeks } from '$lib/paymentAlloc.js';
 import { unixTimestampToDate } from '$lib/date.js';
 import { getUserObligations } from '$lib/server/billing';
@@ -13,7 +14,7 @@ export const load = async ({ locals, platform }) => {
 		!locals.user ||
 		!(await checkIfUserExists(locals.user.email, platform?.env.AccountingDatabase as D1Database))
 	) {
-		return redirect(302, '/login');
+		return redirect(302, resolve('/login'));
 	}
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
 	const allTransactionsFromUser = (

@@ -48,14 +48,14 @@
 		if (!amount || amount <= 0) return;
 		submitting = true;
 		try {
-			const response = await fetch('/api/payments', {
+			const response = await fetch(resolve('/api/payments'), {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ amount, note: note.trim() || undefined, proof })
 			});
 
 			if (!response.ok) {
-				fetch(`/api/auth/verify-user`, { method: 'GET' }).then((res) => {
+				fetch(resolve('/api/auth/verify-user'), { method: 'GET' }).then((res) => {
 					if (!res.ok) {
 						goto(resolve('/login'));
 					}

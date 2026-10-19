@@ -2,6 +2,15 @@
 
 const serviceWorker = globalThis as unknown as ServiceWorkerGlobalScope;
 
+// $app/paths is unavailable in service workers; the registration scope contains the app base.
+function resolveAppUrl(path: string) {
+	const scope = new URL(serviceWorker.registration.scope);
+	const url = new URL(path.replace(/^\//, ''), scope);
+	return url.origin === scope.origin && url.pathname.startsWith(scope.pathname)
+		? url.href
+		: scope.href;
+}
+
 serviceWorker.addEventListener('install', (event) => {
 	event.waitUntil(serviceWorker.skipWaiting());
 });
@@ -18,8 +27,8 @@ serviceWorker.addEventListener('push', (event) => {
 	event.waitUntil(
 		serviceWorker.registration.showNotification(payload.title ?? 'Accountery', {
 			body: payload.body ?? '',
-			icon: '/favicon.ico',
-			badge: '/favicon.ico',
+			icon: resolveAppUrl('/favicon.gif'),
+			badge: resolveAppUrl('/favicon.gif'),
 			data: { url }
 		})
 	);
@@ -27,7 +36,7 @@ serviceWorker.addEventListener('push', (event) => {
 
 serviceWorker.addEventListener('notificationclick', (event) => {
 	event.notification.close();
-	const url = new URL(event.notification.data?.url ?? '/', serviceWorker.location.origin).href;
+	const url = resolveAppUrl(event.notification.data?.url ?? '/');
 	event.waitUntil(
 		(async () => {
 			const clients = await serviceWorker.clients.matchAll({ type: 'window', includeUncontrolled: true });

@@ -6,14 +6,63 @@
 	let { amount, revision = '' }: { amount: number | null | undefined; revision?: string } =
 		$props();
 	let qr = $state('');
+	let downloadable_qr = $state('');
 	let message = $state('');
 	let loading = $state(false);
+	async function svgToPng(
+		svg: string,
+		width: number,
+		height: number
+	): Promise<Blob> {
+		const svgBlob = new Blob([svg], {
+			type: "image/svg+xml;charset=utf-8"
+		});
+
+		const url = URL.createObjectURL(svgBlob);
+
+		try {
+			const image = new Image();
+			image.src = url;
+			await image.decode();
+
+			const canvas = document.createElement("canvas");
+			canvas.width = width;
+			canvas.height = height;
+
+			const ctx = canvas.getContext("2d")!;
+
+			// Especially useful for QR codes
+			ctx.imageSmoothingEnabled = false;
+
+			ctx.drawImage(image, 0, 0, width, height);
+
+			const png = await new Promise<Blob>((resolve, reject) => {
+			canvas.toBlob(
+				blob => blob
+				? resolve(blob)
+				: reject(new Error("PNG conversion failed")),
+				"image/png"
+			);
+			});
+
+			return png;
+		} 
+		catch (error) {
+			console.error("Error converting SVG to PNG:", error);
+			throw error;
+		}
+		finally {
+			URL.revokeObjectURL(url);
+		}
+	}
 	$effect(() => {
 		const value = amount;
 		void revision;
 		qr = '';
+		downloadable_qr = '';
 		message = '';
 		loading = false;
+		console.log("hello?")
 		try {
 			validateAmount(value ?? 0);
 		} catch {
@@ -24,6 +73,7 @@
 		let objectUrl = '';
 		loading = true;
 		const timer = setTimeout(async () => {
+			console.log("fetching qr")
 			try {
 				const response = await fetch(`${resolve('/api/promptpay')}?amount=${value}`, {
 					signal: controller.signal
@@ -38,12 +88,16 @@
 				if (controller.signal.aborted) return;
 				objectUrl = URL.createObjectURL(blob);
 				qr = objectUrl;
+				downloadable_qr = URL.createObjectURL(await svgToPng(await blob.text(), 512, 512));
 			} catch (err) {
+				console.error(err);
 				if (!controller.signal.aborted) message = (err as Error).message;
 			} finally {
+				console.log("finally?")
 				if (!controller.signal.aborted) loading = false;
 			}
 		}, 250);
+		console.log("hi?")
 		return () => {
 			clearTimeout(timer);
 			controller.abort();
@@ -66,8 +120,8 @@
 		<!-- QR downloads use a browser-created blob URL, not an application route. -->
 		<!-- eslint-disable svelte/no-navigation-without-resolve -->
 		<a
-			href={qr}
-			download="promptpay-{amount!.toFixed(2)}.svg"
+			href={downloadable_qr}
+			download="promptpay-{amount!.toFixed(2)}.png"
 			class="text-xs font-medium text-primary underline underline-offset-4">Download QR</a
 		>
 		<!-- eslint-enable svelte/no-navigation-without-resolve -->

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { currency } from '$lib/payments.svelte';
 	import { lightbox } from '$lib/LightboxManager.svelte';
 	import type { Transaction } from './types/AccountingDatabaseTypes';
@@ -117,11 +118,18 @@
 							<button
 								type="button"
 								onclick={() =>
-									lightbox.open(p.image!, `Bank slip for ${currency.format(p.amount)}`)}
+									lightbox.open(
+										resolve(p.image! as `/api/payments/${string}`),
+										`Bank slip for ${currency.format(p.amount)}`
+									)}
 								class="group/slip mt-1.5 flex items-center gap-2 rounded-md border border-border bg-background p-1 pr-2 transition hover:border-primary"
 								aria-label="View bank slip for {currency.format(p.amount)}"
 							>
-								<img src={p.image} alt="Bank slip thumbnail" class="h-8 w-8 rounded object-cover" />
+								<img
+									src={resolve(p.image as `/api/payments/${string}`)}
+									alt="Bank slip thumbnail"
+									class="h-8 w-8 rounded object-cover"
+								/>
 								<span
 									class="text-xs font-medium text-muted-foreground group-hover/slip:text-primary"
 									>View slip</span
