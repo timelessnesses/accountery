@@ -6,6 +6,25 @@
 	import Lightbox from '$lib/Lightbox.svelte';
 	import AppHeader from '$lib/AppHeader.svelte';
 	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
+	import { page } from '$app/state';
+	const shareMessages: Record<string, string> = {
+		submitted: 'Payment submitted using the amount from your slip. It is awaiting review.',
+		approved: 'Payment submitted and approved using your verified slip.',
+		'missing-file': 'Share one payment slip image at a time.',
+		'invalid-image': 'Share a PNG, JPEG, or WebP payment slip.',
+		'too-large': 'Your slip image must be at most 10 MB.',
+		'not-configured':
+			'Automatic shared-slip submission requires SlipOK to be configured. You can submit the payment manually below.',
+		'verification-unavailable':
+			'Slip verification is unavailable. No payment was submitted. Please try again.',
+		'invalid-slip': 'The image could not be verified as a payment slip. No payment was submitted.',
+		'invalid-amount': 'The slip did not contain a valid payment amount. No payment was submitted.',
+		'wrong-recipient':
+			'The slip could not be matched to the saved PromptPay recipient. No payment was submitted.',
+		duplicate: 'This slip has already been submitted. Check your payment history.',
+		'save-failed': 'The payment could not be saved. Please try again.'
+	};
+	const shareMessage = $derived(shareMessages[page.url.searchParams.get('share') ?? '']);
 
 	let { data } = $props();
 
@@ -49,6 +68,13 @@
 	/>
 
 	<!-- Body: transaction log + calendar + payment panel on wide screens -->
+	{#if shareMessage}
+		<div role="status" class="mx-auto mt-4 w-full max-w-7xl px-4 sm:px-6">
+			<p class="rounded-xl border border-border bg-card px-4 py-3 text-sm text-card-foreground">
+				{shareMessage}
+			</p>
+		</div>
+	{/if}
 	<main class="mx-auto flex w-full max-w-7xl flex-1 gap-6 overflow-hidden p-4 sm:px-6 sm:py-6">
 		<!-- Transaction log (left of calendar on wide screens, History tab on mobile) -->
 		<aside

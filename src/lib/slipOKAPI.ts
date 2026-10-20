@@ -54,7 +54,7 @@ export type SlipOkResponse =
 	  };
 
 /** Verify receipt bytes with SlipOK; recipient and duplicate checks live in D1. */
-export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise<SlipOkResponse> {
+export async function checkSlip(slipImage: ArrayBuffer, amount?: number): Promise<SlipOkResponse> {
 	const apiKey = env.SLIP_OK_API_KEY;
 	const apiEndpoint = env.SLIP_OK_API_ENDPOINT;
 	if (!apiKey || !apiEndpoint) {
@@ -65,7 +65,7 @@ export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise
 	// log:true also enforces the receiving account configured in SlipOK's LIFF.
 	// Our receiving account is configured in transfer_promptpay instead.
 	body.set('log', 'false');
-	body.set('amount', String(amount));
+	if (amount !== undefined) body.set('amount', String(amount));
 	const a = await fetch(apiEndpoint, {
 		method: 'POST',
 		signal: AbortSignal.timeout(15000),
@@ -74,6 +74,7 @@ export async function checkSlip(slipImage: ArrayBuffer, amount: number): Promise
 		},
 		body
 	});
+	if (!a.ok) throw new Error(`SlipOK returned HTTP ${a.status}`);
 	const response = await a.json<SlipOkResponse>();
 	return response;
 }

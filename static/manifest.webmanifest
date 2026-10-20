@@ -1,0 +1,21 @@
+{
+	"id": "/",
+	"name": "Accountery - 2026 Cohort",
+	"short_name": "Accountery",
+	"description": "Track weekly obligations and share payment slips.",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"theme_color": "#202824",
+	"background_color": "#202824",
+	"icons": [
+		{ "src": "/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+		{ "src": "/app-icon.png", "sizes": "384x384", "type": "image/png", "purpose": "any" }
+	],
+	"share_target": {
+		"action": "/api/share_target",
+		"method": "POST",
+		"enctype": "multipart/form-data",
+		"params": { "files": [{ "name": "file", "accept": ["image/png", "image/jpeg", "image/webp"] }] }
+	}
+}

@@ -4,6 +4,8 @@
 	import { currency } from '$lib/payments.svelte';
 	import Sun from '@tabler/icons-svelte/icons/sun';
 	import Moon from '@tabler/icons-svelte/icons/moon';
+	import NotificationSubscription from '$lib/NotificationSubscription.svelte';
+	import { unregisterServiceWorker } from '$lib/notification';
 	let {
 		user,
 		publicObligationsEnabled = false,
@@ -23,6 +25,7 @@
 	} = $props();
 	let accountMenuOpen = $state(false);
 	let signingOut = $state(false);
+	let notificationsSubscribed = $state(false);
 	afterNavigate(() => {
 		accountMenuOpen = false;
 	});
@@ -34,6 +37,7 @@
 		if (signingOut) return;
 		signingOut = true;
 		try {
+			await unregisterServiceWorker().catch((err) => console.error('Push cleanup failed:', err));
 			const response = await fetch(resolve('/api/auth/logout'), { method: 'POST' });
 			if (!response.ok) {
 				fetch(resolve('/api/auth/verify-user'), { method: 'GET' }).then((res) => {
@@ -157,6 +161,7 @@
 								<Moon class="size-4" />
 							{/if}
 						</button>
+						<NotificationSubscription bind:subscribed={notificationsSubscribed} />
 						<button
 							onclick={() => {
 								accountMenuOpen = false;
@@ -278,6 +283,7 @@
 								<Moon class="size-4" />
 							{/if}
 						</button>
+						<NotificationSubscription bind:subscribed={notificationsSubscribed} />
 						<button
 							onclick={() => {
 								accountMenuOpen = false;

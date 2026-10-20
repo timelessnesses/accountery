@@ -18,6 +18,13 @@ export const POST = async ({ locals, platform, request }) => {
 	const ids = [...new Set<number>(transactionIds)];
 
 	const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
-	const changed = await processTransactions(accountingDatabase, ids, approved, reason, admin.email);
+	const changed = await processTransactions(
+		accountingDatabase,
+		ids,
+		approved,
+		reason,
+		admin.email,
+		platform!.env
+	);
 	return json({ ok: true, changed });
 };

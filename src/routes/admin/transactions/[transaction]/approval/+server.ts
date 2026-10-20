@@ -19,7 +19,8 @@ export const POST = async ({ locals, params, platform, request }) => {
 		[transactionId],
 		approved,
 		reason,
-		admin.email
+		admin.email,
+		platform!.env
 	);
 	if (!changed)
 		error(

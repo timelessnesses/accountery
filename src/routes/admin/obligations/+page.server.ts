@@ -7,6 +7,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/admin';
 import { auditLogStatement } from '$lib/server/auditLog';
 import { applicableObligationSql } from '$lib/server/billing';
+import { enqueueNotification } from '$lib/server/notificationQueue';
 import { isPublicObligationsEnabled, publicObligationActions } from '$lib/server/publicObligations';
 import {
 	getObligationCreationPauses,
@@ -179,7 +180,7 @@ export const actions = {
 		}
 
 		const accountingDatabase = platform?.env.AccountingDatabase as D1Database;
-		await accountingDatabase.batch([
+		const [created] = await accountingDatabase.batch([
 			accountingDatabase
 				.prepare(
 					`
@@ -200,6 +201,17 @@ export const actions = {
 				)
 		]);
 
+		await enqueueNotification(platform!.env, {
+			type: 'notification',
+			id: `obligation:${created.meta.last_row_id}`,
+			data: {
+				title: 'New obligation',
+				body: `${values.description}: ฿${values.amount.toFixed(2)}.`,
+				url: '/',
+				destination: 'students',
+				output: 'push'
+			}
+		});
 		throw redirect(303, resolve('/admin/obligations'));
 	},
 	update: async ({ platform, request, locals }) => {

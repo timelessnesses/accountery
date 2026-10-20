@@ -1,13 +1,15 @@
-import type { User } from "./AccountingDatabaseTypes";
-
 export type NotificationMessage = {
-    type: 'notification';
-    data: {
-        title: string;
-        body: string;
-        icon?: string;
-        url?: string;
-        destination: "all" | "students" | "admins" | User[];
-        output: "all" | "push" | "email";
-    }
-}
+	type: 'notification';
+	id?: string;
+	event?:
+		| { type: 'review'; transactionId: number }
+		| { type: 'reminder'; day: string; email: string };
+	data: {
+		title: string;
+		body: string;
+		icon?: string;
+		url?: string;
+		destination: 'all' | 'students' | 'admins' | string[];
+		output: 'all' | 'push' | 'email';
+	};
+};

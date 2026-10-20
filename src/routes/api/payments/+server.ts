@@ -1,7 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { validateAmount } from '$lib/promptpay';
-import { automaticallyProcessSlip } from '$lib/server/slipProcessing';
-import { auditLogStatement } from '$lib/server/auditLog';
+import { submitPayment } from '$lib/server/paymentSubmission';
 
 export const POST = async ({ locals, platform, request }) => {
 	const env = platform?.env as Env | undefined;
@@ -11,11 +10,12 @@ export const POST = async ({ locals, platform, request }) => {
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	const body = (await request.json()) as {
+	const body = (await request.json().catch(() => null)) as {
 		amount?: number;
 		note?: string;
 		proof?: Base64URLString;
-	};
+	} | null;
+	if (!body) return json({ error: 'Invalid payment' }, { status: 400 });
 	const amount = Number(body.amount);
 	try {
 		validateAmount(amount);
@@ -23,50 +23,21 @@ export const POST = async ({ locals, platform, request }) => {
 		return json({ error: 'Invalid amount' }, { status: 400 });
 	}
 
-	if (!Number.isFinite(amount) || amount <= 0 || !body.note?.trim() || !body.proof) {
+	if (
+		!Number.isFinite(amount) ||
+		amount <= 0 ||
+		typeof body.note !== 'string' ||
+		!body.note.trim() ||
+		typeof body.proof !== 'string' ||
+		!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(body.proof)
+	) {
 		return json({ error: 'Invalid amount' }, { status: 400 });
 	}
 
 	const imageBytes = dataUrlToBytes(body.proof);
-	const res = (
-		await platform?.env.AccountingReceipts.put(
-			`${new Date().toISOString()}-${locals.user.email}.png`,
-			imageBytes
-		)
-	)?.key;
-
-	const inserted = await accountingDatabase
-		.prepare(
-			'INSERT INTO transactions (email, amount, description, date, type, image) VALUES (?, ?, ?, ?, ?, ?)'
-		)
-		.bind(
-			locals.user.email,
-			Math.round(amount * 100) / 100,
-			body.note?.trim() || 'Payment',
-			Math.floor(Date.now() / 1000),
-			'payment',
-			'/api/payments/' + res
-		)
-		.run();
-	await auditLogStatement(accountingDatabase, {
-		email: locals.user.email,
-		action: `Submitted payment of ${amount.toFixed(2)} baht; note: ${body.note.trim()}`,
-		targets: [{ type: 'transaction', id: inserted.meta.last_row_id }]
-	}).run();
-	let automaticallyApproved = false;
-	try {
-		automaticallyApproved = await automaticallyProcessSlip(
-			accountingDatabase,
-			inserted.meta.last_row_id,
-			amount,
-			imageBytes.buffer as ArrayBuffer,
-			locals.user.email
-		);
-	} catch (err) {
-		// The payment and receipt are saved. Provider failures leave it pending for review/retry.
-		console.error('Automatic slip processing failed; payment remains pending:', err);
-	}
-	return json({ ok: true, automaticallyApproved });
+	if (imageBytes.length > 10 * 1024 * 1024)
+		return json({ error: 'Image must be at most 10 MB.' }, { status: 413 });
+	return json(await submitPayment(env!, locals.user.email, amount, body.note, imageBytes));
 };
 
 function dataUrlToBytes(dataUrl: string): Uint8Array {

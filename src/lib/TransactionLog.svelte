@@ -126,7 +126,7 @@
 								aria-label="View bank slip for {currency.format(p.amount)}"
 							>
 								<img
-									src={resolve(p.image as `/api/payments/${string}`)}
+									src={p.image as `/api/payments/${string}`}
 									alt="Bank slip thumbnail"
 									class="h-8 w-8 rounded object-cover"
 								/>

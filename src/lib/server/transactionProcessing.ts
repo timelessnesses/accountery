@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { enqueueNotification } from './notificationQueue';
 
 export type ProcessingStatus = 'approved' | 'rejected' | 'voided';
 
@@ -22,7 +23,8 @@ export async function processTransactions(
 	ids: number[],
 	approved: ProcessingStatus,
 	reason: string,
-	processor: string
+	processor: string,
+	notificationEnv?: Pick<Env, 'NotificationQueue'>
 ) {
 	let changed = 0;
 	// Stay below D1's bound-parameter limit, including the status and reasons.
@@ -31,7 +33,7 @@ export async function processTransactions(
 		const placeholders = chunk.map(() => '?').join(', ');
 		const eligible =
 			approved === 'voided' ? "approved IN ('approved', 'rejected')" : "approved = 'pending'";
-		const [, result] = await db.batch([
+		const [, result] = await db.batch<{ id: number; email: string; amount: number }>([
 			// Capture only eligible targets before changing them, in the same transaction.
 			db
 				.prepare(
@@ -52,11 +54,26 @@ export async function processTransactions(
 					`UPDATE transactions SET approved = ?, processor = ?,
 				reject_reason = CASE WHEN ? = 'rejected' THEN ? ELSE reject_reason END,
 				void_reason = CASE WHEN ? = 'voided' THEN ? ELSE void_reason END
-				WHERE ${eligible} AND id IN (${placeholders})`
+				WHERE ${eligible} AND id IN (${placeholders}) RETURNING id, email, amount`
 				)
 				.bind(approved, processor, approved, reason, approved, reason, ...chunk)
 		]);
 		changed += result.meta.changes;
+		if (notificationEnv) {
+			for (const transaction of result.results) {
+				await enqueueNotification(notificationEnv, {
+					type: 'notification',
+					id: `processed:${transaction.id}:${approved}`,
+					data: {
+						title: `Payment ${approved}`,
+						body: `Your payment of ฿${transaction.amount.toFixed(2)} was ${approved}.${reason ? ` Reason: ${reason}` : ''}`,
+						url: '/',
+						destination: [transaction.email],
+						output: 'push'
+					}
+				});
+			}
+		}
 	}
 	return changed;
 }

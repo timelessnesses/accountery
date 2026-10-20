@@ -1,94 +1,55 @@
-import type { NotificationMessage } from "$lib/types/QueueMessage";
-import type { Notification } from "$lib/types/AccountingDatabaseTypes";
-import { Resend } from "resend";
-import { env } from "$env/dynamic/private";
-import * as web_push from "web-push";
+import type { NotificationMessage } from './lib/types/QueueMessage';
+import { processNotification, type NotificationEnv } from './lib/server/notificationProcessor';
+import { newWeeklyObligations } from './lib/server/weeklyObligations';
 
-export async function queue(batch: MessageBatch<NotificationMessage>, env: Env, ctx: ExecutionContext) { 
-    for (const message of batch.messages) { 
-        if (message.body.type === 'notification') {
-            if (message.body.data.output === 'push') {
-                await notifyViaPush(message.body, env, ctx);
-            }
-            else if (message.body.data.output === 'email') {
-                await notifyViaEmail(message.body, env, ctx);
-            }
-            else if (message.body.data.output === 'all') {
-                await notifyViaPush(message.body, env, ctx);
-                await notifyViaEmail(message.body, env, ctx);
-            }
-        }
-        message.ack();
-    }
+export async function queue(batch: MessageBatch<NotificationMessage>, env: NotificationEnv) {
+	for (const message of batch.messages) {
+		try {
+			await processNotification(message.body, message.body?.id ?? message.id, env);
+			message.ack();
+		} catch (err) {
+			console.error('Notification delivery failed:', err);
+			message.retry({ delaySeconds: Math.min(3600, 60 * 2 ** (message.attempts - 1)) });
+		}
+	}
 }
 
-const resend = new Resend(env.RESEND_API_KEY);
-
-async function notifyViaPush(notification: NotificationMessage, env: Env, _: ExecutionContext) {
-    web_push.setVapidDetails(
-        'mailto:mooping@timelessnesses.me',
-        env.VAPID_PUBLIC_KEY,
-        env.VAPID_PRIVATE_KEY
-    );
-    const accounting_db = env.AccountingDatabase;
-    if (!accounting_db) throw new Error('AccountingDatabase not configured');
-    const { where, params } = getReceipientsPush(notification, env);
-    const receipients = await accounting_db.prepare(`SELECT * FROM push_subscriptions ${where}`).bind(...params).all<Notification>();
-    if (!receipients || !receipients.results) throw new Error('No receipients found');
-
-    const pushMessages = receipients.results.map(async recipient => { 
-        await web_push.sendNotification({
-            endpoint: recipient.endpoint,
-            keys: {
-                p256dh: recipient.p256dh,
-                auth: recipient.auth
-            },
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            data: JSON.stringify({
-                title: notification.data.title,
-                body: notification.data.body,
-                icon: notification.data.icon,
-                url: notification.data.url
-            })
-        });
-    }).map(p => p.catch(err => {
-        console.error('Error sending push notification:', err);
-    }));
-    await Promise.all(pushMessages);
-}
-
-async function notifyViaEmail(notification: NotificationMessage, env: Env, _: ExecutionContext) { 
-    const accounting_db = env.AccountingDatabase;
-    if (!accounting_db) throw new Error('AccountingDatabase not configured');
-    const { where, params } = getReceipientsPush(notification, env);
-    const receipients = await accounting_db.prepare(`SELECT * FROM push_subscriptions ${where}`).bind(...params).all<Notification>();
-    if (!receipients || !receipients.results) throw new Error('No receipients found');
-
-    const emailMessages = receipients.results.map(recipient => { 
-        return {
-            from: "accountery@timelessnesses.me",
-            to: recipient.email,
-            subject: notification.data.title,
-            html: notification.data.body
-        }
-    });
-    await resend.batch.send(emailMessages);
-}
-
-function getReceipientsPush(notification: NotificationMessage, _: Env): {
-    where: string;
-    params: unknown[];
-} { 
-    if (notification.data.destination === 'all') { 
-        return { where: "", params: [] };
-    } else if (notification.data.destination === 'students') {
-        return { where: "WHERE email IN (SELECT email FROM users WHERE role = 'student')", params: [] };
-    } else if (notification.data.destination === 'admins') { 
-        return { where: "WHERE email IN (SELECT email FROM users WHERE role = 'admin')", params: [] };
-    } else if (Array.isArray(notification.data.destination)) { 
-        return { where: "WHERE email IN (?)", params: notification.data.destination };
-    }
-    throw new Error('Invalid destination');
+export async function scheduled(controller: ScheduledController, env: NotificationEnv) {
+	// Keep the weekly schedule and hourly catch-up from the former accounting-cron Worker.
+	if (controller.cron === '0 0 * * SUN' || controller.cron === '0 * * * *') {
+		await newWeeklyObligations(
+			env.AccountingDatabase,
+			new Date(controller.scheduledTime),
+			env.NotificationQueue
+		);
+		return;
+	}
+	if (controller.cron === '0 2 * * *') {
+		const day = new Date(controller.scheduledTime + 7 * 3600000).toISOString().slice(0, 10);
+		const cutoff = Date.parse(day + 'T00:00:00Z') / 1000;
+		const recipients = await env.AccountingDatabase.prepare(
+			`SELECT email, remaining FROM (
+			SELECT u.email, ROUND((SELECT COALESCE(SUM(o.amount), 0) FROM obligations o WHERE o.deleted_at IS NULL
+				AND (CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END) <= ?)
+				- (SELECT COALESCE(SUM(t.amount), 0) FROM transactions t WHERE t.email = u.email AND t.approved IN ('approved', 'pending')), 2) remaining
+			FROM users u WHERE u.deleted_at IS NULL AND u.left_at IS NULL AND u.role != 'admin' AND u.email != ?
+			) WHERE remaining > 0`
+		)
+			.bind(cutoff, env.ADMIN_EMAIL ?? '')
+			.all<{ email: string; remaining: number }>();
+		for (const recipient of recipients.results) {
+			await env.NotificationQueue.send({
+				type: 'notification',
+				id: `reminder:${day}:${recipient.email}`,
+				event: { type: 'reminder', day, email: recipient.email },
+				data: {
+					title: 'Daily payment reminder',
+					body: `You have ฿${recipient.remaining.toFixed(2)} still to submit.`,
+					url: '/',
+					destination: [recipient.email],
+					output: 'push'
+				}
+			} satisfies NotificationMessage);
+		}
+	}
 }

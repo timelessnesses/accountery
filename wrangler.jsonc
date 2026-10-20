@@ -16,6 +16,7 @@
 		"enabled": true
 	},
 	"upload_source_maps": true,
+	"triggers": { "crons": ["0 0 * * SUN", "0 * * * *", "0 2 * * *"] },
 	"d1_databases": [
 		{
 			"binding": "AccountingDatabase",
@@ -41,6 +42,7 @@
 		"consumers": [
 			{
 				"queue": "notification",
+				"dead_letter_queue": "notification-dead-letter",
 				"max_batch_size": 10,
 				"max_retries": 3
 			}

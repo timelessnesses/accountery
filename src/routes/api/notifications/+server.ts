@@ -1,10 +1,29 @@
-import { env } from '$env/dynamic/private';
 import { error, json } from '@sveltejs/kit';
-import type { RequestHandler } from './subscription/$types';
+import { isPushEndpoint, validPushKey } from '$lib/server/pushSubscription';
+import type { RequestHandler } from './$types';
+
+export const GET: RequestHandler = async ({ locals, platform, url }) => {
+	if (!locals.user) error(401, 'Sign in to enable notifications.');
+	const endpoint = url.searchParams.get('endpoint');
+	const subscription = endpoint
+		? await platform!.env.AccountingDatabase.prepare(
+				'SELECT endpoint FROM notifications WHERE endpoint = ? AND email = ?'
+			)
+				.bind(endpoint, locals.user.email)
+				.first()
+		: null;
+	return json(
+		{ publicKey: platform!.env.VAPID_PUBLIC_KEY || null, subscribed: !!subscription },
+		{
+			headers: { 'cache-control': 'no-store' }
+		}
+	);
+};
 
 export const POST: RequestHandler = async ({ locals, platform, request }) => {
 	if (!locals.user) error(401, 'Sign in to enable notifications.');
-	if (!env.VAPID_PUBLIC_KEY) error(503, 'Push notifications have not been configured.');
+	if (!platform!.env.VAPID_PUBLIC_KEY || !platform!.env.VAPID_PRIVATE_KEY)
+		error(503, 'Push notifications have not been configured.');
 	const body = (await request.json().catch(() => error(400, 'Invalid JSON.'))) as {
 		endpoint?: unknown;
 		keys?: { p256dh?: unknown; auth?: unknown };
@@ -13,32 +32,30 @@ export const POST: RequestHandler = async ({ locals, platform, request }) => {
 		error(400, 'A subscription endpoint is required.');
 	if (!body.keys || typeof body.keys.p256dh !== 'string' || typeof body.keys.auth !== 'string')
 		error(400, 'Subscription keys are required.');
+	if (
+		!isPushEndpoint(body.endpoint) ||
+		!validPushKey(body.keys.p256dh, 65) ||
+		!validPushKey(body.keys.auth, 16)
+	)
+		error(400, 'Invalid push subscription.');
 	const db = platform!.env.AccountingDatabase;
 	await db.batch([
+		db.prepare('DELETE FROM notifications WHERE endpoint = ?').bind(body.endpoint),
 		db
-			.prepare(
-				`DELETE FROM push_deliveries WHERE endpoint = ? AND EXISTS
-			(SELECT 1 FROM push_subscriptions WHERE endpoint = ? AND email != ?)`
-			)
-			.bind(body.endpoint, body.endpoint, locals.user.email),
-		db
-			.prepare(
-				`INSERT INTO push_subscriptions (endpoint, email, p256dh, auth)
-			VALUES (?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET email = excluded.email,
-			p256dh = excluded.p256dh, auth = excluded.auth,
-			created_at = CASE WHEN email != excluded.email THEN unixepoch() ELSE created_at END`
-			)
+			.prepare('INSERT INTO notifications (endpoint, email, p256dh, auth) VALUES (?, ?, ?, ?)')
 			.bind(body.endpoint, locals.user.email, body.keys.p256dh, body.keys.auth)
 	]);
 	return json({ ok: true });
 };
 
-export const DELETE: RequestHandler = async ({ locals, platform }) => {
+export const DELETE: RequestHandler = async ({ locals, platform, request }) => {
 	if (!locals.user) error(401, 'Sign in to disable notifications.');
+	const body = (await request.json().catch(() => null)) as { endpoint?: unknown } | null;
+	if (!isPushEndpoint(body?.endpoint)) error(400, 'A subscription endpoint is required.');
 	await platform!.env.AccountingDatabase.prepare(
-		'DELETE FROM push_subscriptions WHERE email = ?'
+		'DELETE FROM notifications WHERE email = ? AND endpoint = ?'
 	)
-		.bind(locals.user.email)
+		.bind(locals.user.email, body.endpoint)
 		.run();
 	return json({ ok: true });
 };

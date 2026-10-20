@@ -5,8 +5,6 @@ import { getUserObligations } from '$lib/server/billing';
 import { isPublicObligationsEnabled } from '$lib/server/publicObligations';
 import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
 import { redirect } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { env as envPublic } from '$env/dynamic/public';
 import { checkIfUserExists } from './api/auth/verify-user/checkUserExist.js';
 
 export const load = async ({ locals, platform }) => {
@@ -29,8 +27,6 @@ export const load = async ({ locals, platform }) => {
 	const allObligations = await getUserObligations(accountingDatabase, locals.user.email);
 	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
 	const nextDue = allocatedWeeks.find((week) => week.status !== 'paid');
-
-	console.log(env, envPublic);
 
 	return {
 		publicObligationsEnabled: await isPublicObligationsEnabled(accountingDatabase),

@@ -1,20 +1,19 @@
 # accountery
 
 accountery is a simple "weekly obligations" tracker thingy for my faculty. This entire repository uses Cloudflare infrastructure stack. Meaning you need to have a Cloudflare account and a Cloudflare Worker instance running for the main app paired with R1 storage for slip images and D2 database for storing students and their obligations.  
-You also need to have a separate CF Worker instance running for the cronjob.
+The main Worker also runs the scheduled jobs; no separate cron Worker is required.
 
 ## Features
 
 - Google OAuth2 (Google Sign-In or GSI) for authentication (with domain restriction)
 - Student ID whitelisting (admin can import students from CSV or XLSX file)
-- Automatic weekly obligations creator (with a separate cronjob worker)
+- Automatic weekly obligations creator (scheduled in the main Worker)
 - Slip image verification using SlipOK API (optional)
 
 ## Requirements
 
 - Cloudflare account
 - Cloudflare Worker instance for the main app
-- Cloudflare Worker instance for the cronjob (optional)
 - R1 storage for slip images
 - D2 database for storing students and their obligations
 - Google Cloud project with OAuth2 client credentials set up
@@ -66,7 +65,15 @@ You need an admin email logged in (`ADMIN_EMAIL`) and then you can import studen
 
 ### Automatic Weekly Obligations Creator
 
-You can also deploy [`accountery-cron`](https://github.com/timelessnesses/accountery-cron) to automatically create weekly obligations for students. You need to set up a separate Cloudflare Worker instance for the cronjob and tie the main D2 database to it.
+The main Worker's `src/platform.cloudflare.ts` handles weekly obligations and notification
+reminders. `wrangler.jsonc` includes the former cron Worker's Sunday schedule (`0 0 * * SUN`,
+07:00 Asia/Bangkok) and hourly catch-up (`0 * * * *`). These create the next Sunday's ฿30
+obligation only if it does not already exist and its start date is not paused. Duplicate
+invocations and soft-deleted weeks are not recreated.
+
+Deploy the main app with `pnpm deploy`. If the separate `accounting-cron` Worker is already
+deployed, disable its cron triggers when switching over. The legacy submodule is no longer
+used by the main app and does not need to be built or deployed.
 
 ### Known Issues
 
@@ -77,3 +84,23 @@ You can also deploy [`accountery-cron`](https://github.com/timelessnesses/accoun
 ### Backfill
 
 Edit the `0021_backfill_transaction_processors.sql` file to add processors for your transactions if you're updating.
+
+### Notifications and installed app sharing
+
+Apply migrations through `0023_notifications.sql`; its `notifications` table stores device
+push subscriptions only. Notifications go directly to Cloudflare Queue (`NotificationQueue`),
+which handles delivery retries and sends exhausted messages to `notification-dead-letter`.
+There is no in-app inbox, D1 outbox, or delivery ledger. Configure `VAPID_PUBLIC_KEY` and
+`VAPID_PRIVATE_KEY` for push, and `RESEND_API_KEY` for messages requesting email delivery.
+
+Payment submissions, processing results, and newly created obligations enqueue alerts after
+the database write. All producers and scheduled jobs use the main Worker's `NotificationQueue`
+binding. Daily payment reminders run at 09:00 Asia/Bangkok (`0 2 * * *` UTC).
+Queue retries can resend successful pushes; stable tags let browsers replace matching alerts,
+and email requests use provider idempotency keys. A queue outage before enqueueing is logged;
+it does not roll back a saved payment or obligation, and there is no database backlog to replay.
+
+Shared slips use the existing SlipOK verification and `slipok_cache`. The cache's bank and
+transfer reference are checked atomically with payment creation to prevent concurrent duplicate
+shares. No separate slip claims table or additional migration is required. Automatic approval
+still requires the opt-in setting and all recipient, amount, and duplicate checks to pass.
