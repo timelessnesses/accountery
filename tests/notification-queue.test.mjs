@@ -376,11 +376,11 @@ test('an enqueue outage does not turn a saved payment into a failed submission',
 	}
 });
 
-test('the main Worker handles Sunday and hourly creation using the scheduled time, with duplicate and pause guards', async () => {
+test('the hourly trigger handles Sunday creation using the scheduled time, with duplicate and pause guards', async () => {
 	const db = database();
 	const env = environment(db);
 	const sunday = Date.parse('2026-10-18T00:00:00Z');
-	await scheduled({ cron: '0 0 * * SUN', scheduledTime: sunday }, env);
+	await scheduled({ cron: '0 * * * *', scheduledTime: sunday }, env);
 	await scheduled({ cron: '0 * * * *', scheduledTime: sunday + 3600000 }, env);
 	let obligations = rows(db, 'SELECT * FROM obligations');
 	assert.equal(obligations.length, 1);
@@ -397,14 +397,14 @@ test('the main Worker handles Sunday and hourly creation using the scheduled tim
 			'INSERT INTO obligation_creation_pauses(start_date,end_date,created_at) VALUES (?, ?, 1)'
 		)
 		.run(paused, paused);
-	await scheduled({ cron: '0 0 * * SUN', scheduledTime: sunday + 7 * 86400000 }, env);
+	await scheduled({ cron: '0 * * * *', scheduledTime: sunday + 7 * 86400000 }, env);
 	obligations = rows(db, 'SELECT * FROM obligations');
 	assert.equal(obligations.length, 1);
 	assert.equal(env.queued.length, 1);
 	db.sqlite.close();
 });
 
-test('Bangkok daily reminders enqueue directly, ignore future/deleted charges and subtract pending payments', async () => {
+test('the hourly trigger sends reminders only at 09:00 Bangkok, with the scheduled date and pending payments deducted', async () => {
 	const db = database();
 	user(db);
 	user(db, 'paid@test');
@@ -428,14 +428,20 @@ test('Bangkok daily reminders enqueue directly, ignore future/deleted charges an
 			}
 		}
 	};
-	const controller = { cron: '0 2 * * *', scheduledTime: Date.parse('2026-10-19T02:00:00Z') };
+	const controller = { cron: '0 * * * *', scheduledTime: Date.parse('2026-10-19T02:00:00Z') };
+	const reminders = () => sent.filter((message) => message.event?.type === 'reminder');
+	await scheduled({ ...controller, scheduledTime: controller.scheduledTime - 3600000 }, env);
+	assert.equal(reminders().length, 0);
 	await scheduled(controller, env);
-	assert.equal(sent.length, 1);
-	assert.equal(sent[0].id, 'reminder:2026-10-19:student@test');
-	assert.equal(sent[0].event.type, 'reminder');
-	assert.match(sent[0].data.body, /30.00/);
-	await scheduled({ ...controller, cron: '* * * * *' }, env);
-	assert.equal(sent.length, 1);
+	assert.equal(reminders().length, 1);
+	assert.equal(reminders()[0].id, 'reminder:2026-10-19:student@test');
+	assert.match(reminders()[0].data.body, /30.00/);
+	await scheduled({ ...controller, scheduledTime: controller.scheduledTime + 3600000 }, env);
+	await scheduled({ ...controller, scheduledTime: Date.parse('2026-10-19T17:00:00Z') }, env);
+	assert.equal(reminders().length, 1);
+	await scheduled({ ...controller, scheduledTime: Date.parse('2026-10-20T02:00:00Z') }, env);
+	assert.equal(reminders().length, 2);
+	assert.equal(reminders()[1].id, 'reminder:2026-10-20:student@test');
 	db.sqlite.close();
 });
 
@@ -523,12 +529,13 @@ test('settled reminders and completed review requests are suppressed before deli
 	db.sqlite.exec(
 		"INSERT INTO obligations(start_date,end_date,amount,description) VALUES (1,2,30,'Current')"
 	);
-	await scheduled({ cron: '0 2 * * *', scheduledTime: Date.now() }, env);
+	const day = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+	await scheduled({ cron: '0 * * * *', scheduledTime: Date.parse(day + 'T02:00:00Z') }, env);
 	db.sqlite.exec(
 		"INSERT INTO transactions(email,amount,description,date,type) VALUES ('student@test',30,'Pay',1,'payment'); UPDATE transactions SET approved='approved'"
 	);
 	env.queued.push({ ...notification('admins'), event: { type: 'review', transactionId: 1 } });
-	const events = env.queued;
+	const events = env.queued.filter((message) => message.event);
 	assert.equal(events.length, 2);
 	let sent = 0;
 	for (const event of events)

@@ -15,17 +15,16 @@ export async function queue(batch: MessageBatch<NotificationMessage>, env: Notif
 }
 
 export async function scheduled(controller: ScheduledController, env: NotificationEnv) {
-	// Keep the weekly schedule and hourly catch-up from the former accounting-cron Worker.
-	if (controller.cron === '0 0 * * SUN' || controller.cron === '0 * * * *') {
-		await newWeeklyObligations(
-			env.AccountingDatabase,
-			new Date(controller.scheduledTime),
-			env.NotificationQueue
-		);
-		return;
-	}
-	if (controller.cron === '0 2 * * *') {
-		const day = new Date(controller.scheduledTime + 7 * 3600000).toISOString().slice(0, 10);
+	// One hourly trigger checks for missing weekly obligations and runs reminders at 09:00 Bangkok.
+	await newWeeklyObligations(
+		env.AccountingDatabase,
+		new Date(controller.scheduledTime),
+		env.NotificationQueue
+	);
+	// Use the scheduled time so a delayed invocation keeps its intended day and hour.
+	const bangkokTime = new Date(controller.scheduledTime + 7 * 3600000);
+	if (bangkokTime.getUTCHours() === 9) {
+		const day = bangkokTime.toISOString().slice(0, 10);
 		const cutoff = Date.parse(day + 'T00:00:00Z') / 1000;
 		const recipients = await env.AccountingDatabase.prepare(
 			`SELECT email, remaining FROM (

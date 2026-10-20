@@ -66,8 +66,8 @@ You need an admin email logged in (`ADMIN_EMAIL`) and then you can import studen
 ### Automatic Weekly Obligations Creator
 
 The main Worker's `src/platform.cloudflare.ts` handles weekly obligations and notification
-reminders. `wrangler.jsonc` includes the former cron Worker's Sunday schedule (`0 0 * * SUN`,
-07:00 Asia/Bangkok) and hourly catch-up (`0 * * * *`). These create the next Sunday's ฿30
+reminders using one hourly trigger (`0 * * * *`) in `wrangler.jsonc`. Each invocation checks
+the scheduled date and creates the next Sunday's ฿30
 obligation only if it does not already exist and its start date is not paused. Duplicate
 invocations and soft-deleted weeks are not recreated.
 
@@ -95,7 +95,8 @@ There is no in-app inbox, D1 outbox, or delivery ledger. Configure `VAPID_PUBLIC
 
 Payment submissions, processing results, and newly created obligations enqueue alerts after
 the database write. All producers and scheduled jobs use the main Worker's `NotificationQueue`
-binding. Daily payment reminders run at 09:00 Asia/Bangkok (`0 2 * * *` UTC).
+binding. The hourly handler checks the scheduled Bangkok time and sends daily payment
+reminders only at 09:00; no additional cron trigger is needed.
 Queue retries can resend successful pushes; stable tags let browsers replace matching alerts,
 and email requests use provider idempotency keys. A queue outage before enqueueing is logged;
 it does not roll back a saved payment or obligation, and there is no database backlog to replay.
