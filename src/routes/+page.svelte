@@ -16,7 +16,7 @@
 		'not-configured':
 			'Automatic shared-slip submission requires SlipOK to be configured. You can submit the payment manually below.',
 		'verification-unavailable':
-			'Slip verification is unavailable. No payment was submitted. Please try again.',
+			'Slip verification is unavailable or incorrect. No payment was submitted. Please try again.',
 		'invalid-slip': 'The image could not be verified as a payment slip. No payment was submitted.',
 		'invalid-amount': 'The slip did not contain a valid payment amount. No payment was submitted.',
 		'wrong-recipient':
