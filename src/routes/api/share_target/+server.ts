@@ -23,7 +23,12 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	try {
 		response = await checkSlip(image);
 	} catch (e) {
-		console.error(e)
+		console.error({
+			message: 'SlipOK API error',
+			error: e instanceof Error ? e.message : String(e),
+			stack: e instanceof Error ? e.stack : undefined,
+			errorMessage: e instanceof Error ? e.message : undefined
+		})
 		return fail('verification-unavailable');
 	}
 	if (!response.success || !response.data?.success) return fail('invalid-slip');

@@ -74,7 +74,7 @@ export async function checkSlip(slipImage: ArrayBuffer, amount?: number): Promis
 		},
 		body
 	});
-	if (!a.ok) throw new Error(`SlipOK returned HTTP ${a.status}`);
+	if (!a.ok) throw new Error(`SlipOK returned HTTP ${a.status}\n${await a.text()}`);
 	const response = await a.json<SlipOkResponse>();
 	return response;
 }
