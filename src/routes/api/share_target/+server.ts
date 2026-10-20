@@ -22,7 +22,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	let response;
 	try {
 		response = await checkSlip(image);
-	} catch {
+	} catch (e) {
+		console.error(e)
 		return fail('verification-unavailable');
 	}
 	if (!response.success || !response.data?.success) return fail('invalid-slip');
