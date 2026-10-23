@@ -159,7 +159,6 @@
 						<input
 							type="file"
 							accept="image/*"
-							capture="environment"
 							class="hidden"
 							required
 							onchange={onFile}
