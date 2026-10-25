@@ -12,6 +12,7 @@
 	import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
 
 	const { data } = $props();
+	const readOnly = $derived(data.instanceLifecycle.status === 'closing');
 
 	let updating = $state(false);
 	let selectedDate = $state('');
@@ -270,7 +271,7 @@
 				<Button
 					size="sm"
 					class="bg-success text-success-foreground hover:bg-success/80"
-					disabled={updating || transaction.approved !== 'pending'}
+					disabled={readOnly || updating || transaction.approved !== 'pending'}
 					onclick={() => updateTransactions([transaction], 'approved')}
 				>
 					Approve
@@ -278,7 +279,7 @@
 				<Button
 					size="sm"
 					variant="destructive"
-					disabled={updating || transaction.approved !== 'pending'}
+					disabled={readOnly || updating || transaction.approved !== 'pending'}
 					onclick={() => updateTransactions([transaction], 'rejected')}
 				>
 					Deny
@@ -286,7 +287,8 @@
 				<Button
 					size="sm"
 					variant="outline"
-					disabled={updating ||
+					disabled={readOnly ||
+						updating ||
 						(transaction.approved !== 'approved' && transaction.approved !== 'rejected')}
 					onclick={() => confirmationDoing([transaction], 'voided')}>Void</Button
 				>
@@ -298,7 +300,7 @@
 				<Button
 					size="sm"
 					class="bg-success text-success-foreground hover:bg-success/80"
-					disabled={updating || disabled}
+					disabled={readOnly || updating || disabled}
 					onclick={() => confirmationDoing(selected, 'approved')}
 				>
 					Approve all {selected.length} Transaction{selected.length > 1 ? 's' : ''}
@@ -306,7 +308,7 @@
 				<Button
 					size="sm"
 					variant="destructive"
-					disabled={updating || disabled}
+					disabled={readOnly || updating || disabled}
 					onclick={() => confirmationDoing(selected, 'rejected')}
 				>
 					Deny all {selected.length} Transaction{selected.length > 1 ? 's' : ''}
@@ -314,7 +316,8 @@
 				<Button
 					size="sm"
 					variant="outline"
-					disabled={updating ||
+					disabled={readOnly ||
+						updating ||
 						disabled ||
 						!selected.some((tx) => tx.approved === 'approved' || tx.approved === 'rejected')}
 					onclick={() => confirmationDoing(selected, 'voided')}>Void processed transactions</Button

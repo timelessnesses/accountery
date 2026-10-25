@@ -12,6 +12,7 @@
 	const { data } = $props();
 
 	const pendingTransactions = $derived(data.allPendingTransactions);
+	const readOnly = $derived(data.instanceLifecycle.status === 'closing');
 	let updatingTransactionId = $state<number | undefined>();
 	let expandedTransactionId = $state<number | undefined>();
 	let verifyingTransactionId = $state<number | undefined>();
@@ -116,8 +117,14 @@
 	<AdminPageHeader
 		title="Overview"
 		description={`${pendingTransactions.length} ${pendingTransactions.length === 1 ? 'transaction needs' : 'transactions need'} review.`}
-	/>
+	>
+		{#if !readOnly}<Button href={resolve('/admin/upload-slip')}>Upload slip</Button>{/if}
+		{#if data.isBootstrapAdministrator}
+			<Button href={resolve('/admin/instance')} variant="outline">Instance settings</Button>
+		{/if}
+	</AdminPageHeader>
 
+	<h2 class="text-lg font-semibold">Waiting for approval</h2>
 	<div class="overflow-hidden rounded-md border border-border bg-card">
 		<Table.Root class="w-full">
 			<Table.Header>
@@ -178,7 +185,7 @@
 									<Button
 										size="sm"
 										class="bg-success text-success-foreground hover:bg-success/80"
-										disabled={updatingTransactionId === transaction.id}
+										disabled={readOnly || updatingTransactionId === transaction.id}
 										onclick={(event) => {
 											event.stopPropagation();
 											updateTransaction(transaction, 'approved');
@@ -189,7 +196,7 @@
 									<Button
 										size="sm"
 										variant="destructive"
-										disabled={updatingTransactionId === transaction.id}
+										disabled={readOnly || updatingTransactionId === transaction.id}
 										onclick={(event) => {
 											event.stopPropagation();
 											updateTransaction(transaction, 'rejected');
@@ -226,7 +233,7 @@
 													<Button
 														size="sm"
 														variant="outline"
-														disabled={verifyingTransactionId === transaction.id}
+														disabled={readOnly || verifyingTransactionId === transaction.id}
 														onclick={() => verifySlip(transaction)}
 													>
 														Verify slip

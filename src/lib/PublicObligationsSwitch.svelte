@@ -27,10 +27,10 @@
 	class="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-4"
 >
 	<div class="min-w-0">
-		<p class="text-sm font-semibold">Obligations Owed: Public Database</p>
+		<p class="text-sm font-semibold">Public payment summary</p>
 		<p class="mt-1 text-xs text-muted-foreground">
 			{enabled
-				? 'On — anyone with the link can view names, balances, and pending totals.'
+				? 'On — anyone with the link can view aggregate payment statistics. No names or individual balances are shared.'
 				: 'Off — the public page is unavailable.'}
 		</p>
 		{#if message}<p role="alert" class="mt-2 text-sm text-danger">{message}</p>{/if}

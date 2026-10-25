@@ -41,6 +41,9 @@ PUBLIC_ORGANIZATION_DOMAIN=
 SLIP_OK_API_ENDPOINT=
 SLIP_OK_API_KEY=
 AUTHENTICATION_METHOD=
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+RESEND_API_KEY=
 ```
 
 - `GOOGLE_OAUTH_CLIENT_SECRET`: Google OAuth client secret (Required)
@@ -50,6 +53,8 @@ AUTHENTICATION_METHOD=
 - `SLIP_OK_API_ENDPOINT`: The URL of the SlipOK API endpoint (Optional)
 - `SLIP_OK_API_KEY`: The API key for the SlipOK API (Optional)
 - `AUTHENTICATION_METHOD`: How server would identify user logging in using either JSON Web Token (JWT) or session token (SESSION). Trade off is for JWT you can't revoke the key, and role reflection will not be updated until next login, for SESSION it's extra database hops but you can revoke the key and role reflection will be updated immediately. Default is JWT.
+- `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`: Web Push keys for subscribed devices.
+- `RESEND_API_KEY`: Resend API key for notification emails sent from `accountery@timelessnesses.me`. This sender's domain must be verified in Resend.
 
 ### Login as Student setup
 
@@ -62,6 +67,51 @@ This app uses the [SlipOK API](https://slipok.com/api) for checking slip images.
 ### Student ID whitelisting
 
 You need an admin email logged in (`ADMIN_EMAIL`) and then you can import students with CSV or XLSX file (indexing starts at 0 sorry!) then select which row to be student ID, name and even nickname and individually select which student can have admin role.
+
+### Privacy notice after login
+
+Apply `0024_privacy_policy_read.sql` before using the privacy notice screen. After Google login,
+users who have not acknowledged the current notice are sent to `/privacy-notice` before private
+pages or payment actions. The required checkbox records acknowledgement of version 1.0.0 in
+`users.privacy_policy_read_version`, with one audit entry. It does not record blanket consent.
+
+Push is a separate optional checkbox. It starts the browser permission/subscription flow only
+when selected; denial or unsupported devices do not prevent acknowledgement or app access.
+The account menu continues to offer notification controls. The privacy policy is publicly available
+at `/privacy` without signing in or accessing D1.
+
+The server loaders import `static/privacy-markdown/v1.md` for `/privacy` and
+`static/privacy-notice-markdown/v1.md` for `/privacy-notice`, render Markdown to HTML,
+and return it as the `html` page prop. `/privacy` is prerendered at build time;
+`/privacy-notice` renders on the server to preserve its session checks and acknowledgement
+action. `src/lib/PrivacyNoticeContent.svelte` displays either document. Update the constants
+in `src/lib/privacyNotice.ts` when publishing a new notice version.
+
+### Departed accounts and instance closure
+
+Apply `0025_account_anonymization.sql` and `0026_instance_lifecycle_guards.sql` before deploying these features.
+
+**Mark as left** blocks sign-in immediately, replaces the account with `left-user-{uuid}@tsu.ac.th`,
+removes the member's name, personal transaction notes, subscriptions, and stored slip images,
+and scrubs linked audit entries and SlipOK personal data. Transaction amounts, dates, statuses,
+and the departure billing cutoff are retained. Bank references remain only for duplicate-transfer
+checks. A keyed email digest prevents importing the original account again. If receipt deletion
+fails, the account stays blocked and the admin can retry **Finish anonymization**.
+
+Only the administrator identified by `ADMIN_EMAIL` sees **Admin → Instance** or can submit
+**Destroy this instance**. The server requires the acknowledgement checkbox, the exact text
+`DESTROY THIS INSTANCE`, and a same-origin request. With unpaid obligations, confirmation
+closes member access and makes administrator access read-only. All application records and
+receipt files are retained until 90 calendar days after the selected closing date, at midnight
+in Bangkok. The existing hourly cron deletes them on or after that deadline and retries failed
+cleanup. With no unpaid obligations, confirmed destruction is immediate. A previously scheduled
+retention period cannot be shortened or bypassed through the app.
+
+Destruction empties the bound receipt bucket, including files no longer referenced by a payment,
+and removes application records from D1. It retains the database schema/migration history and
+one disabled-instance marker so cron and queued notifications cannot restart the installation.
+The Cloudflare Worker, D1 database, R2 bucket, queues, and shared secrets are kept. No Cloudflare
+management API token is required. These bindings must belong exclusively to this installation.
 
 ### Automatic Weekly Obligations Creator
 
@@ -91,12 +141,16 @@ Apply migrations through `0023_notifications.sql`; its `notifications` table sto
 push subscriptions only. Notifications go directly to Cloudflare Queue (`NotificationQueue`),
 which handles delivery retries and sends exhausted messages to `notification-dead-letter`.
 There is no in-app inbox, D1 outbox, or delivery ledger. Configure `VAPID_PUBLIC_KEY` and
-`VAPID_PRIVATE_KEY` for push, and `RESEND_API_KEY` for messages requesting email delivery.
+`VAPID_PRIVATE_KEY` for push, and `RESEND_API_KEY` for email delivery.
 
 Payment submissions, processing results, and newly created obligations enqueue alerts after
 the database write. All producers and scheduled jobs use the main Worker's `NotificationQueue`
 binding. The hourly handler checks the scheduled Bangkok time and sends daily payment
 reminders only at 09:00; no additional cron trigger is needed.
+These alerts request both push and email. Email reaches active accounts even without a push
+subscription. Student notices and reminders include admins, since admin permissions do not
+remove student obligations; payment review requests go only to admins. Deleted and departed
+accounts receive neither channel.
 Queue retries can resend successful pushes; stable tags let browsers replace matching alerts,
 and email requests use provider idempotency keys. A queue outage before enqueueing is logged;
 it does not roll back a saved payment or obligation, and there is no database backlog to replay.

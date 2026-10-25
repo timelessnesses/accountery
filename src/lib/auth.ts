@@ -6,7 +6,13 @@ import { requireLoginUser } from '$lib/server/loginUser';
 export async function verifyJWT(
 	token: string,
 	env: Env
-): Promise<{ email: string; name: string; nickname: string; admin: boolean }> {
+): Promise<{
+	email: string;
+	name: string;
+	nickname: string;
+	admin: boolean;
+	privacyPolicyReadVersion: number;
+}> {
 	const secret = env.SharedSecrets as SecretsStoreSecret;
 	const secretValue = await secret.get();
 	if (!secretValue) {
@@ -26,7 +32,8 @@ export async function verifyJWT(
 		email: payload.sub as string,
 		name: user.name,
 		nickname: user.nickname,
-		admin: user.role === 'admin' || envPrivate.ADMIN_EMAIL === user.email
+		admin: user.role === 'admin' || envPrivate.ADMIN_EMAIL === user.email,
+		privacyPolicyReadVersion: user.privacy_policy_read_version
 	};
 }
 function turnThisToUint8Array(secret: string): Uint8Array {

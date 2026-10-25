@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import '$lib/index.css';
 
 	const builtAt = new Date(__BUILD_DATE).toLocaleString('en-TH', {
@@ -35,6 +36,8 @@
 				>
 					{__GIT_COMMIT}
 				</a>
+				<span> | </span>
+				<a href={resolve('/privacy')}>Privacy policy</a>
 			</p>
 		</div>
 	</footer>

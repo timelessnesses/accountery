@@ -1,4 +1,5 @@
 import { enqueueNotification } from './notificationQueue';
+import { getInstanceStatus } from './instanceLifecycle';
 
 /** Create the next Sunday's obligation unless its start date is paused or already exists. */
 export async function newWeeklyObligations(
@@ -6,6 +7,7 @@ export async function newWeeklyObligations(
 	now = new Date(),
 	notificationQueue?: Queue
 ) {
+	if ((await getInstanceStatus(database)) !== 'active') return false;
 	const nextSunday = new Date(now);
 	const daysUntilNextSunday = now.getUTCDay() === 0 ? 7 : 7 - now.getUTCDay();
 	nextSunday.setUTCDate(nextSunday.getUTCDate() + daysUntilNextSunday);
@@ -41,7 +43,7 @@ export async function newWeeklyObligations(
 					body: 'New weekly obligation: ฿30.00.',
 					url: '/',
 					destination: 'students',
-					output: 'push'
+					output: 'all'
 				}
 			}
 		);

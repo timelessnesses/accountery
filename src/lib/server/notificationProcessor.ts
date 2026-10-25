@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import type { NotificationMessage } from '../types/QueueMessage';
 import type { Notification } from '../types/AccountingDatabaseTypes';
 import { isPushEndpoint } from './pushSubscription';
+import { getInstanceStatus } from './instanceLifecycle';
 
 // Use Workers' native fetch transport rather than Node's HTTPS agent.
 async function sendWebPush(...args: Parameters<typeof webPush.generateRequestDetails>) {
@@ -33,9 +34,8 @@ export function recipientFilter(
 	adminEmail = ''
 ) {
 	const active = 'u.deleted_at IS NULL AND u.left_at IS NULL';
-	if (destination === 'all') return { where: active, params: [] };
-	if (destination === 'students')
-		return { where: `${active} AND u.role != 'admin' AND u.email != ?`, params: [adminEmail] };
+	// Student accounts retain their obligations when granted admin permissions.
+	if (destination === 'all' || destination === 'students') return { where: active, params: [] };
 	if (destination === 'admins')
 		return { where: `${active} AND (u.role = 'admin' OR u.email = ?)`, params: [adminEmail] };
 	if (
@@ -69,11 +69,15 @@ export async function processNotification(
 	)
 		throw new Error('Invalid notification message');
 	const db = env.AccountingDatabase;
+	if ((await getInstanceStatus(db)) !== 'active') return;
 	const event = notification.event;
 	if (event) {
 		if (event.type === 'review') {
 			const pending = await db
-				.prepare("SELECT 1 FROM transactions WHERE id = ? AND approved = 'pending'")
+				.prepare(
+					`SELECT 1 FROM transactions t JOIN users u ON u.email = t.email
+					WHERE t.id = ? AND t.approved = 'pending' AND u.deleted_at IS NULL AND u.left_at IS NULL`
+				)
 				.bind(event.transactionId)
 				.first();
 			if (!pending) return;

@@ -3,12 +3,14 @@ import { applicableObligationSql } from './billing';
 import { requireAdmin } from './admin';
 import { auditLogStatement } from './auditLog';
 
-export type PublicObligationBalance = {
-	name: string;
-	nickname: string;
-	owed: number;
-	pending: number;
-	pendingCount: number;
+export type PublicObligationSummary = {
+	outstandingAmount: number;
+	unfulfilledObligations: number;
+	studentsWithUnpaidObligations: number;
+	pendingAmount: number;
+	remainingAfterPending: number;
+	totalObligations: number;
+	fulfilledObligations: number;
 };
 
 export async function isPublicObligationsEnabled(database: D1Database) {
@@ -18,32 +20,49 @@ export async function isPublicObligationsEnabled(database: D1Database) {
 	return setting?.value === '1';
 }
 
-export async function getPublicObligationBalances(database: D1Database) {
-	// Only public fields leave the query: no account identifiers or payment records.
-	const { results } = await database
+export async function getPublicObligationSummary(database: D1Database) {
+	// Allocate approved funds oldest first, as on the private payment pages.
+	// Work in integer cents and return only a single aggregate row from SQL.
+	return database
 		.prepare(
 			`
-		WITH balances AS (
-			SELECT u.name, u.nickname,
-				(SELECT COALESCE(SUM(o.amount), 0) FROM obligations o
-					WHERE ${applicableObligationSql}) -
-				(SELECT COALESCE(SUM(t.amount), 0) FROM transactions t
-					WHERE t.email = u.email AND t.approved = 'approved') AS owed,
-				(SELECT COALESCE(SUM(t.amount), 0) FROM transactions t
-					WHERE t.email = u.email AND t.approved = 'pending') AS pending,
-				(SELECT COUNT(*) FROM transactions t
-					WHERE t.email = u.email AND t.approved = 'pending') AS pendingCount
+		WITH funds AS (
+			SELECT u.email, u.left_at,
+				(SELECT COALESCE(SUM(CAST(ROUND(t.amount * 100) AS INTEGER)), 0)
+					FROM transactions t WHERE t.email = u.email AND t.approved = 'approved') AS approvedCents,
+				(SELECT COALESCE(SUM(CAST(ROUND(t.amount * 100) AS INTEGER)), 0)
+					FROM transactions t WHERE t.email = u.email AND t.approved = 'pending') AS pendingCents
 			FROM users u WHERE u.deleted_at IS NULL
+		), assigned AS (
+			SELECT u.email, u.approvedCents, u.pendingCents,
+				CAST(ROUND(o.amount * 100) AS INTEGER) AS amountCents,
+				SUM(CAST(ROUND(o.amount * 100) AS INTEGER)) OVER (
+					PARTITION BY u.email
+					ORDER BY CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END, o.id
+					ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+				) AS dueCents
+			FROM funds u JOIN obligations o ON ${applicableObligationSql}
+		), balances AS (
+			SELECT email, MAX(dueCents) AS dueCents, approvedCents, pendingCents
+			FROM assigned GROUP BY email
+		), counts AS (
+			SELECT COUNT(*) AS totalObligations,
+				COUNT(CASE WHEN amountCents > 0 AND dueCents > approvedCents THEN 1 END) AS unfulfilledObligations
+			FROM assigned
 		)
-		SELECT name, nickname, owed, pending, pendingCount FROM balances
-		WHERE owed > 0 AND EXISTS (
+		SELECT
+			COALESCE((SELECT SUM(MAX(dueCents - approvedCents, 0)) FROM balances), 0) / 100.0 AS outstandingAmount,
+			unfulfilledObligations,
+			(SELECT COUNT(*) FROM balances WHERE dueCents > approvedCents) AS studentsWithUnpaidObligations,
+			COALESCE((SELECT SUM(MIN(MAX(pendingCents, 0), MAX(dueCents - approvedCents, 0))) FROM balances), 0) / 100.0 AS pendingAmount,
+			COALESCE((SELECT SUM(MAX(dueCents - approvedCents - MAX(pendingCents, 0), 0)) FROM balances), 0) / 100.0 AS remainingAfterPending,
+			totalObligations, totalObligations - unfulfilledObligations AS fulfilledObligations
+		FROM counts WHERE EXISTS (
 			SELECT 1 FROM app_settings WHERE key = 'public_obligations_enabled' AND value = '1'
 		)
-		ORDER BY owed DESC, name, nickname
 	`
 		)
-		.all<PublicObligationBalance>();
-	return results;
+		.first<PublicObligationSummary>();
 }
 
 export const publicObligationActions = {

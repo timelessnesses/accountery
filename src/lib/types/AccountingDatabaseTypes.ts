@@ -7,6 +7,8 @@ export type User = {
 	logged_in_when: Date | null;
 	deleted_at: Date | null;
 	left_at: number | null;
+	anonymized_at: number | null;
+	privacy_policy_read_version: number;
 };
 
 export type Transaction = {
@@ -59,4 +61,4 @@ export type Notification = {
 	email: string;
 	p256dh: string;
 	auth: string;
-}
+};

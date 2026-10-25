@@ -69,7 +69,7 @@ export async function processTransactions(
 						body: `Your payment of ฿${transaction.amount.toFixed(2)} was ${approved}.${reason ? ` Reason: ${reason}` : ''}`,
 						url: '/',
 						destination: [transaction.email],
-						output: 'push'
+						output: 'all'
 					}
 				});
 			}

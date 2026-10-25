@@ -25,6 +25,7 @@ declare global {
 				name: string;
 				nickname: string;
 				admin: boolean;
+				privacyPolicyReadVersion?: number;
 			};
 			google_oauth_client_id: string;
 		}

@@ -4,6 +4,9 @@ import { error } from '@sveltejs/kit';
 import { OAuth2Client } from 'google-auth-library';
 import * as jose from 'jose';
 import { requireLoginUser } from '$lib/server/loginUser';
+import { getInstanceStatus, isBootstrapAdministrator } from '$lib/server/instanceLifecycle';
+import { resolve } from '$app/paths';
+import { PRIVACY_NOTICE_VERSION } from '$lib/privacyNotice';
 
 export type GoogleJwtRequest = {
 	id_token: string;
@@ -39,7 +42,19 @@ export async function POST({ request, cookies, platform }) {
 
 	const studentID = payload.email.split('@')[0];
 
-	await requireLoginUser(accountingDatabase, payload.email);
+	const loginUser = await requireLoginUser(accountingDatabase, payload.email);
+	const instanceStatus = await getInstanceStatus(accountingDatabase);
+	const bootstrap = isBootstrapAdministrator(
+		{ email: payload.email, admin: true, name: '', nickname: '' },
+		platform?.env.ADMIN_EMAIL ?? envPrivate.ADMIN_EMAIL
+	);
+	if (instanceStatus === 'destroying' && !bootstrap)
+		error(503, 'This instance is being destroyed.');
+	if (instanceStatus === 'closing' && loginUser.role !== 'admin' && !bootstrap)
+		error(
+			403,
+			'This instance is closed to members. Only administrators can review retained records.'
+		);
 	/* await accountingDatabase.prepare("INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)").bind(
 		payload.email,
 		`User requested Google OAuth login with JWT. Student ID: ${studentID}. Giving new session token.`,
@@ -48,7 +63,8 @@ export async function POST({ request, cookies, platform }) {
 	const id = await issuingNewSessionToken(
 		payload.email,
 		accountingDatabase,
-		platform?.env.SharedSecrets as SecretsStoreSecret
+		platform?.env.SharedSecrets as SecretsStoreSecret,
+		instanceStatus === 'destroying'
 	);
 	cookies.set('token', id, {
 		path: '/',
@@ -57,21 +73,38 @@ export async function POST({ request, cookies, platform }) {
 		// secure: true,
 		maxAge: 3600
 	});
-	await accountingDatabase
-		.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
-		.bind(
-			payload.email,
-			`User ${payload.email} logged in with Google OAuth. Student ID: ${studentID}.`,
-			Math.floor(Date.now() / 1000)
-		)
-		.run();
-	return new Response(JSON.stringify({ success: true }), { status: 200 });
+	if (instanceStatus !== 'destroying')
+		await accountingDatabase
+			.prepare('INSERT INTO logs (email, action, timestamp) VALUES (?, ?, ?)')
+			.bind(
+				payload.email,
+				`User ${payload.email} logged in with Google OAuth. Student ID: ${studentID}.`,
+				Math.floor(Date.now() / 1000)
+			)
+			.run();
+	const privacyNoticeRequired =
+		instanceStatus === 'active' && loginUser.privacy_policy_read_version < PRIVACY_NOTICE_VERSION;
+	return new Response(
+		JSON.stringify({
+			success: true,
+			privacyNoticeRequired,
+			redirectTo: privacyNoticeRequired
+				? resolve('/privacy-notice')
+				: instanceStatus === 'destroying'
+					? resolve('/admin/instance')
+					: instanceStatus === 'closing'
+						? resolve('/admin')
+						: resolve('/')
+		}),
+		{ status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
+	);
 }
 
 async function issuingNewSessionToken(
 	studentEmail: string,
 	database: D1Database,
-	secret: SecretsStoreSecret
+	secret: SecretsStoreSecret,
+	skipMetadataWrites = false
 ) {
 	const stmt = await requireLoginUser(database, studentEmail);
 
@@ -93,10 +126,11 @@ async function issuingNewSessionToken(
 		})
 		.sign(turnThisToUint8Array(await secret.get()));
 
-	await database
-		.prepare('UPDATE users SET logged_in_when = ?, session_expiry = ? WHERE email = ?')
-		.bind(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000) + 3600, studentEmail)
-		.run();
+	if (!skipMetadataWrites)
+		await database
+			.prepare('UPDATE users SET logged_in_when = ?, session_expiry = ? WHERE email = ?')
+			.bind(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000) + 3600, studentEmail)
+			.run();
 	return sessionToken;
 }
 

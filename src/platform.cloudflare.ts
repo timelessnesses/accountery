@@ -1,6 +1,11 @@
 import type { NotificationMessage } from './lib/types/QueueMessage';
-import { processNotification, type NotificationEnv } from './lib/server/notificationProcessor';
+import {
+	processNotification,
+	recipientFilter,
+	type NotificationEnv
+} from './lib/server/notificationProcessor';
 import { newWeeklyObligations } from './lib/server/weeklyObligations';
+import { runScheduledInstanceDestruction } from './lib/server/instanceLifecycle';
 
 export async function queue(batch: MessageBatch<NotificationMessage>, env: NotificationEnv) {
 	for (const message of batch.messages) {
@@ -14,7 +19,11 @@ export async function queue(batch: MessageBatch<NotificationMessage>, env: Notif
 	}
 }
 
-export async function scheduled(controller: ScheduledController, env: NotificationEnv) {
+export async function scheduled(
+	controller: ScheduledController,
+	env: NotificationEnv & Pick<Env, 'AccountingReceipts'>
+) {
+	if (await runScheduledInstanceDestruction(env, controller.scheduledTime / 1000)) return;
 	// One hourly trigger checks for missing weekly obligations and runs reminders at 09:00 Bangkok.
 	await newWeeklyObligations(
 		env.AccountingDatabase,
@@ -26,15 +35,16 @@ export async function scheduled(controller: ScheduledController, env: Notificati
 	if (bangkokTime.getUTCHours() === 9) {
 		const day = bangkokTime.toISOString().slice(0, 10);
 		const cutoff = Date.parse(day + 'T00:00:00Z') / 1000;
+		const { where, params } = recipientFilter('students', env.ADMIN_EMAIL);
 		const recipients = await env.AccountingDatabase.prepare(
 			`SELECT email, remaining FROM (
 			SELECT u.email, ROUND((SELECT COALESCE(SUM(o.amount), 0) FROM obligations o WHERE o.deleted_at IS NULL
 				AND (CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END) <= ?)
 				- (SELECT COALESCE(SUM(t.amount), 0) FROM transactions t WHERE t.email = u.email AND t.approved IN ('approved', 'pending')), 2) remaining
-			FROM users u WHERE u.deleted_at IS NULL AND u.left_at IS NULL AND u.role != 'admin' AND u.email != ?
+			FROM users u WHERE ${where}
 			) WHERE remaining > 0`
 		)
-			.bind(cutoff, env.ADMIN_EMAIL ?? '')
+			.bind(cutoff, ...params)
 			.all<{ email: string; remaining: number }>();
 		for (const recipient of recipients.results) {
 			await env.NotificationQueue.send({
@@ -46,7 +56,7 @@ export async function scheduled(controller: ScheduledController, env: Notificati
 					body: `You have ฿${recipient.remaining.toFixed(2)} still to submit.`,
 					url: '/',
 					destination: [recipient.email],
-					output: 'push'
+					output: 'all'
 				}
 			} satisfies NotificationMessage);
 		}

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import AdminPageHeader from '$lib/admin/AdminPageHeader.svelte';
 	import DataTable from '$lib/DataTable.svelte';
 	import * as DropDownMenu from '$lib/components/ui/dropdown-menu/index.js';
@@ -12,6 +13,7 @@
 	import type { TransformedUser } from '$lib/types/AccountingDatabaseTypes.js';
 
 	const { data } = $props();
+	const readOnly = $derived(page.data.instanceLifecycle?.status === 'closing');
 
 	type StudentRow = {
 		id: string;
@@ -115,10 +117,11 @@
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ students: previewStudents })
 		})
-			.then((r) => {
+			.then(async (r) => {
 				if (!r.ok) throw new Error('Failed to import student data');
+				const result = (await r.json()) as { importedCount: number; skippedCount: number };
 				alert(
-					`Imported ${previewStudents.length} student${previewStudents.length > 1 ? 's' : ''} successfully`
+					`Imported ${result.importedCount} students. ${result.skippedCount} existing or departed accounts were skipped.`
 				);
 				closeDialog();
 				window.location.reload();
@@ -307,6 +310,7 @@
 					> -->
 					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+						disabled={readOnly}
 						onclick={() => {
 							confirm = true;
 							userToChange = user;
@@ -317,6 +321,7 @@
 					</DropDownMenu.Item>
 					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+						disabled={readOnly}
 						onclick={() => {
 							confirm = true;
 							userToChange = user;
@@ -326,6 +331,7 @@
 					</DropDownMenu.Item>
 					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+						disabled={readOnly}
 						onclick={() => {
 							showDeleteConfirm = true;
 							userToChange = user;
@@ -335,6 +341,7 @@
 					</DropDownMenu.Item>
 					<DropDownMenu.Item
 						class="cursor-pointer data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground"
+						disabled={readOnly}
 						onclick={() => {
 							nameDialogOpen = true;
 							userToChange = user;
@@ -374,7 +381,7 @@
 				}}>Reset {selected.length} Session Token{selected.length > 1 ? 's' : ''}</Button
 			> -->
 			<Button
-				{disabled}
+				disabled={disabled || readOnly}
 				onclick={() => {
 					showDeleteConfirm2 = true;
 					userSelected = selected;
@@ -383,6 +390,7 @@
 				Delete {selected.length} User{selected.length > 1 ? 's' : ''}
 			</Button>
 			<Button
+				disabled={readOnly}
 				onclick={() => {
 					fileInput.click();
 				}}>Import Student Data</Button

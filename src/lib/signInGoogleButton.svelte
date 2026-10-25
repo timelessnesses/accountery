@@ -25,7 +25,8 @@
 						result?.message ?? result?.error ?? 'Failed to sign in with Google. Please try again.'
 					);
 				}
-				window.location.href = resolve('/');
+				const result = (await r.json()) as { redirectTo?: string };
+				window.location.href = result.redirectTo ?? resolve('/');
 			})
 			.catch((err) => {
 				console.error('Error during Google sign-in:', err);

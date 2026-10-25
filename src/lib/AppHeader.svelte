@@ -113,7 +113,7 @@
 						<a
 							href={resolve('/obligations-owed')}
 							class="mt-1 inline-block text-xs font-medium text-primary underline-offset-4 hover:underline"
-							>Obligations Owed: Public Database</a
+							>Public payment summary</a
 						>
 					{/if}
 				</div>

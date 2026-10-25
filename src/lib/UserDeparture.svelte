@@ -1,12 +1,15 @@
 <script lang="ts">
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { Dialog } from 'bits-ui';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import type { User } from '$lib/types/AccountingDatabaseTypes';
 
-	const { user }: { user: Pick<User, 'email' | 'name' | 'left_at' | 'role'> } = $props();
+	const { user }: { user: Pick<User, 'email' | 'name' | 'left_at' | 'role' | 'anonymized_at'> } =
+		$props();
 	const inputId = $props.id();
+	const readOnly = $derived(page.data.instanceLifecycle?.status === 'closing');
 	let open = $state(false);
 	let leavingDate = $state('');
 	let saving = $state(false);
@@ -45,8 +48,14 @@
 				const result = (await response.json().catch(() => null)) as { message?: string } | null;
 				throw new Error(result?.message ?? 'Unable to save the leaving date. Please try again.');
 			}
-			await invalidateAll();
+			const result = (await response.json()) as { email: string };
 			open = false;
+			if (
+				result.email !== user.email &&
+				decodeURIComponent(page.url.pathname).endsWith('/' + user.email)
+			)
+				await goto(resolve('/admin/users/[user]', { user: result.email }), { invalidateAll: true });
+			else await invalidateAll();
 		} catch (err) {
 			message = err instanceof Error ? err.message : 'Unable to save the leaving date.';
 		} finally {
@@ -63,15 +72,23 @@
 	>
 		{savedDate ? `Left · ${savedDate}` : `Active`}
 	</span>
-	{#if user.role === "admin"}
-		<span class = "whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium bg-success/10 text-info">Admin</span>
+	{#if user.role === 'admin'}
+		<span
+			class="whitespace-nowrap rounded-full px-2 py-1 text-xs font-medium bg-success/10 text-info"
+			>Admin</span
+		>
 	{/if}
 	<Dialog.Root bind:open>
 		<Dialog.Trigger
+			disabled={readOnly}
 			onclick={edit}
 			class="whitespace-nowrap rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
 		>
-			{savedDate ? 'Edit leaving date' : 'Mark as left'}
+			{user.anonymized_at
+				? 'Edit leaving date'
+				: savedDate
+					? 'Finish anonymization'
+					: 'Mark as left'}
 		</Dialog.Trigger>
 		<Dialog.Portal>
 			<Dialog.Overlay class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
@@ -79,11 +96,13 @@
 				class="fixed left-1/2 top-1/2 z-50 max-h-[90dvh] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-background p-6 shadow-xl"
 			>
 				<Dialog.Title class="text-lg font-semibold"
-					>{savedDate ? 'Edit leaving date' : 'Mark user as left'}</Dialog.Title
+					>{user.anonymized_at
+						? 'Edit leaving date'
+						: 'Mark user as left and anonymize'}</Dialog.Title
 				>
 				<Dialog.Description class="mt-2 text-sm text-muted-foreground">
-					Choose when new charges stop for {user.name}. Earlier obligations and payment history are
-					kept.
+					Choose when new charges stop for {user.name}. Earlier obligations and accounting amounts,
+					dates, and payment statuses are kept.
 				</Dialog.Description>
 				<p class="mt-2 break-all text-xs text-muted-foreground">{user.email}</p>
 				<form onsubmit={save} class="mt-5 space-y-4">
@@ -108,13 +127,25 @@
 						existing sessions and calendar subscriptions. Changing the date later only changes
 						billing.
 					</p>
+					{#if !user.anonymized_at}
+						<p class="rounded-md border border-danger/30 bg-danger/10 p-3 text-sm">
+							This permanently replaces their email with a random left-user address, removes their
+							name and personal notes, deletes all stored slip images, and removes subscriptions and
+							personal slip verification data. Their original account cannot be restored or imported
+							again.
+						</p>
+					{/if}
 					{#if message}<p role="alert" class="text-sm text-danger">{message}</p>{/if}
 					<div class="flex justify-end gap-2">
 						<Button type="button" variant="outline" disabled={saving} onclick={() => (open = false)}
 							>Cancel</Button
 						>
 						<Button type="submit" disabled={saving}
-							>{saving ? 'Saving…' : savedDate ? 'Save leaving date' : 'Mark as left'}</Button
+							>{saving
+								? 'Saving…'
+								: user.anonymized_at
+									? 'Save leaving date'
+									: 'Mark as left and anonymize'}</Button
 						>
 					</div>
 				</form>

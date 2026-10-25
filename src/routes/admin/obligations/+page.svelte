@@ -33,6 +33,7 @@
 	};
 
 	const { data, form }: PageProps = $props();
+	const readOnly = $derived(data.instanceLifecycle.status === 'closing');
 
 	const weeks = $derived(data.weeks as ObligationWeek[]);
 	const highlightedId = $derived(positiveId(page.url.searchParams.get('highlightObligationId')));
@@ -102,19 +103,23 @@
 				data-audit-highlight={highlightedSetting === 'creation-pauses' ? '' : undefined}
 				use:auditFocus={highlightedSetting === 'creation-pauses'}
 			>
-				<AutomaticObligationControl pauses={data.creationPauses} />
+				<fieldset disabled={readOnly}>
+					<AutomaticObligationControl pauses={data.creationPauses} />
+				</fieldset>
 			</div>
-			<Button onclick={() => (showCreateForm = !showCreateForm)}>Create new obligation</Button>
+			<Button disabled={readOnly} onclick={() => (showCreateForm = !showCreateForm)}
+				>Create new obligation</Button
+			>
 			<Button
 				variant="outline"
-				disabled={!selectedWeek}
+				disabled={readOnly || !selectedWeek}
 				onclick={() => (showEditForm = !showEditForm)}
 			>
 				Edit selected obligation
 			</Button>
 			<Button
 				variant="destructive"
-				disabled={!selectedWeek}
+				disabled={readOnly || !selectedWeek}
 				onclick={() => (deleteWeek = selectedWeek ?? null)}
 			>
 				Delete selected obligation
@@ -127,7 +132,9 @@
 		data-audit-highlight={highlightedSetting === 'public-obligations' ? '' : undefined}
 		use:auditFocus={highlightedSetting === 'public-obligations'}
 	>
-		<PublicObligationsSwitch enabled={data.publicObligationsEnabled} />
+		<fieldset disabled={readOnly}>
+			<PublicObligationsSwitch enabled={data.publicObligationsEnabled} />
+		</fieldset>
 	</div>
 	{#if highlightedId !== null && !weeks.some((week) => week.id === String(highlightedId))}
 		<p role="status" class="rounded-lg border border-border bg-muted/30 p-3 text-sm">

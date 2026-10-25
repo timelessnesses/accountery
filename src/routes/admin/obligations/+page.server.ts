@@ -209,7 +209,7 @@ export const actions = {
 				body: `${values.description}: ฿${values.amount.toFixed(2)}.`,
 				url: '/',
 				destination: 'students',
-				output: 'push'
+				output: 'all'
 			}
 		});
 		throw redirect(303, resolve('/admin/obligations'));
