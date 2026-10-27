@@ -27,3 +27,4 @@ vite.config.ts.timestamp-*
 
 insert_transactions.sql
 transactions.csv
+/legals

@@ -138,7 +138,7 @@
 					</div>
 				</div>
 			{/if}
-			<PaymentForm {selectedWeek} nextDue={data.nextDue} />
+			<PaymentForm {selectedWeek} nextDue={data.nextDue} isAutomaticSlipCheckOn={data.isAutomaticSlipCheckOn} />
 		</aside>
 	</main>
 

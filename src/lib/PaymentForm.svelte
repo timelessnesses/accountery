@@ -7,8 +7,7 @@
 
 	import PromptPayQr from '$lib/PromptPayQr.svelte';
 
-	let { selectedWeek, nextDue }: { selectedWeek?: AllocatedWeek; nextDue?: AllocatedWeek } =
-		$props();
+	let { selectedWeek, nextDue, isAutomaticSlipCheckOn }: { selectedWeek?: AllocatedWeek; nextDue?: AllocatedWeek, isAutomaticSlipCheckOn?: boolean } = $props();
 
 	let amount = $state<number | null>(null);
 	let note = $state('Paying Obligation');
@@ -186,6 +185,11 @@
 					{automaticallyApproved
 						? 'Slip verified and payment approved. Your balance has been updated.'
 						: 'Payment saved and awaiting review.'}
+				</p>
+			{/if}
+			{#if isAutomaticSlipCheckOn}
+				<p class="text-center text-xs font-medium text-success">
+					Your bank slip will be forwarded to SlipOK for automatic verification. Please read the privacy policy and notice for details on how your data will be processed.
 				</p>
 			{/if}
 		</div>

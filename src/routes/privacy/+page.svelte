@@ -6,10 +6,10 @@
 	const { data }: PageProps = $props();
 </script>
 
-<svelte:head><title>Privacy policy · Accountery</title></svelte:head>
+<svelte:head><title>นโยบายและประกาศความเป็นส่วนตัว (Privacy Policy & Notice) · Accountery</title></svelte:head>
 <main class="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6">
 	<header class="mb-6 flex flex-wrap items-center justify-between gap-3">
-		<h1 class="text-xl font-semibold">Privacy policy</h1>
+		<h1 class="text-xl font-semibold">นโยบายและประกาศความเป็นส่วนตัว (Privacy Policy & Notice)</h1>
 		<a href={resolve('/')} class="text-sm font-medium text-primary underline underline-offset-4"
 			>กลับหน้าหลัก</a
 		>

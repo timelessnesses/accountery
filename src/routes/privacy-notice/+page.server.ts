@@ -9,7 +9,7 @@ import { requireLoginUser } from '$lib/server/loginUser';
 import { auditLogStatement } from '$lib/server/auditLog';
 import { getInstanceStatus } from '$lib/server/instanceLifecycle';
 import type { Actions, PageServerLoad } from './$types';
-import markdown from '../../../static/privacy-notice-markdown/v1.md?raw';
+import markdown from '../../../static/privacy-markdown/v1.md?raw';
 import { renderMarkdown } from '$lib/server/markdown';
 
 const html = renderMarkdown(markdown);

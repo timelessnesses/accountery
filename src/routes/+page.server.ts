@@ -6,6 +6,7 @@ import { isPublicObligationsEnabled } from '$lib/server/publicObligations';
 import type { Transaction } from '$lib/types/AccountingDatabaseTypes';
 import { redirect } from '@sveltejs/kit';
 import { checkIfUserExists } from './api/auth/verify-user/checkUserExist.js';
+import { isAutomaticSlipProcessingEnabled } from '$lib/server/slipProcessing.js';
 
 export const load = async ({ locals, platform }) => {
 	if (
@@ -27,6 +28,7 @@ export const load = async ({ locals, platform }) => {
 	const allObligations = await getUserObligations(accountingDatabase, locals.user.email);
 	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
 	const nextDue = allocatedWeeks.find((week) => week.status !== 'paid');
+	const isAutomaticSlipCheckOn = await isAutomaticSlipProcessingEnabled(accountingDatabase);
 
 	return {
 		publicObligationsEnabled: await isPublicObligationsEnabled(accountingDatabase),
@@ -34,6 +36,7 @@ export const load = async ({ locals, platform }) => {
 		transaction: allTransactionsFromUser,
 		obligations: allObligations,
 		allocatedWeeks,
-		nextDue
+		nextDue,
+		isAutomaticSlipCheckOn
 	};
 };

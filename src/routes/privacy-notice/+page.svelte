@@ -118,7 +118,7 @@
 			aria-label="Privacy notice version 1.0.0"
 		>
 			<div class="border-b border-border px-5 py-3 text-xs text-muted-foreground">
-				ประกาศความเป็นส่วนตัว · เวอร์ชัน {PRIVACY_NOTICE_LABEL}
+				นโยบายและประกาศความเป็นส่วนตัว (Privacy Policy & Notice) · เวอร์ชัน {PRIVACY_NOTICE_LABEL}
 			</div>
 			<!-- svelte-ignore a11y_no_noninteractive_tabindex (The scrollable notice needs keyboard focus so it can be read without a pointer.) -->
 			<div
