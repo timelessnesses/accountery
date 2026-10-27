@@ -51,7 +51,9 @@ export type SlipOkResponse =
 	| {
 			success: true;
 			data: SlipOkResponseObject;
-	  };
+	};
+	  
+import { readBarcodes } from 'zxing-wasm/reader';
 
 /** Verify receipt bytes with SlipOK; recipient and duplicate checks live in D1. */
 export async function checkSlip(slipImage: ArrayBuffer, amount?: number): Promise<SlipOkResponse> {
@@ -61,10 +63,11 @@ export async function checkSlip(slipImage: ArrayBuffer, amount?: number): Promis
 		throw new Error('SlipOK API key or endpoint is not set in environment variables.');
 	}
 	const body = new FormData();
-	body.set('files', new Blob([slipImage], { type: 'image/png' }), 'receipt.png');
 	// log:true also enforces the receiving account configured in SlipOK's LIFF.
 	// Our receiving account is configured in transfer_promptpay instead.
+	const data = await readBarcodes(slipImage, { formats: ["QR Code"], tryHarder: true });
 	body.set('log', 'false');
+	body.set('data', data[0].text)
 	if (amount !== undefined) body.set('amount', String(amount));
 	const a = await fetch(apiEndpoint, {
 		method: 'POST',
