@@ -123,13 +123,6 @@
 					Includes partial payments and payments awaiting approval.
 				</p>
 			</div>
-			<div class="summary-card">
-				<h3>Awaiting approval</h3>
-				<p class="summary-value text-info">{currency.format(data.summary.pendingAmount)}</p>
-				<p class="text-xs text-muted-foreground">
-					Pending payments that would cover unpaid obligations.
-				</p>
-			</div>
 		</section>
 
 		<section

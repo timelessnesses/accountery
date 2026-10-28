@@ -6,8 +6,8 @@ import { auditLogStatement } from './auditLog';
 export type PublicObligationSummary = {
 	outstandingAmount: number;
 	unfulfilledObligations: number;
-	studentsWithUnpaidObligations: number;
-	pendingAmount: number;
+	studentsWithUnpaidObligations: number | string;
+	// pendingAmount: number;
 	remainingAfterPending: number;
 	totalObligations: number;
 	fulfilledObligations: number;
@@ -54,7 +54,6 @@ export async function getPublicObligationSummary(database: D1Database) {
 			COALESCE((SELECT SUM(MAX(dueCents - approvedCents, 0)) FROM balances), 0) / 100.0 AS outstandingAmount,
 			unfulfilledObligations,
 			(SELECT COUNT(*) FROM balances WHERE dueCents > approvedCents) AS studentsWithUnpaidObligations,
-			COALESCE((SELECT SUM(MIN(MAX(pendingCents, 0), MAX(dueCents - approvedCents, 0))) FROM balances), 0) / 100.0 AS pendingAmount,
 			COALESCE((SELECT SUM(MAX(dueCents - approvedCents - MAX(pendingCents, 0), 0)) FROM balances), 0) / 100.0 AS remainingAfterPending,
 			totalObligations, totalObligations - unfulfilledObligations AS fulfilledObligations
 		FROM counts WHERE EXISTS (
