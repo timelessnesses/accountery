@@ -2,7 +2,7 @@ import { base } from '$app/paths';
 
 // Matches static/privacy-notice-markdown/v1.md (1.0.0).
 export const PRIVACY_NOTICE_VERSION = 1;
-export const PRIVACY_NOTICE_LABEL = '1.0.0';
+export const PRIVACY_NOTICE_LABEL = '1.2';
 
 export function safeNoticeReturnTo(value: unknown, appBase = base) {
 	const fallback = `${appBase}/`;
