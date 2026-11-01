@@ -62,3 +62,12 @@ export type Notification = {
 	p256dh: string;
 	auth: string;
 };
+
+export type ExceptionObligation = {
+	obligation_id: number;
+	email: string;
+	granted_by: string;
+	granted_at: number;
+	grant_reason: string;
+	voided_at: number | null;
+};

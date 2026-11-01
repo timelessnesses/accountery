@@ -44,7 +44,9 @@ const unpaidSummarySql = `WITH balances AS (
 		SELECT MAX(0,
 			(SELECT COALESCE(SUM(CAST(ROUND(o.amount * 100) AS INTEGER)), 0) FROM obligations o
 				WHERE o.deleted_at IS NULL AND (u.left_at IS NULL OR
-				(CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END) < u.left_at)) -
+				(CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END) < u.left_at)
+				AND NOT EXISTS (SELECT 1 FROM exception_obligation eo
+					WHERE eo.obligation_id = o.id AND eo.email = u.email AND eo.voided_at IS NULL)) -
 			(SELECT COALESCE(SUM(CAST(ROUND(t.amount * 100) AS INTEGER)), 0) FROM transactions t
 				WHERE t.email = u.email AND t.approved = 'approved')) AS owedCents
 		FROM users u WHERE u.deleted_at IS NULL

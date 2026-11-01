@@ -16,10 +16,10 @@
 	let submitting = $state(false);
 	let justSaved = $state(false);
 	let automaticallyApproved = $state(false);
+	const target = $derived(selectedWeek?.status === 'exempt' ? nextDue : (selectedWeek ?? nextDue));
 
 	// Prefill amount with what's needed to clear the next due / selected week.
 	onMount(() => {
-		const target = selectedWeek ?? nextDue;
 		if (target && amount === null) {
 			amount = target.remaining;
 		}
@@ -75,10 +75,18 @@
 		}
 	}
 
-	const target = $derived(selectedWeek ?? nextDue);
 </script>
 
 <div class="flex flex-col gap-5">
+	{#if selectedWeek?.status === 'exempt'}
+		<div class="rounded-xl border border-border bg-card p-4" role="status">
+			<h3 class="text-sm font-semibold text-card-foreground">This obligation is exempt</h3>
+			<p class="mt-1 text-sm text-muted-foreground">
+				It is excluded from your balance and payment allocation. Any payment you submit applies to
+				other obligations.
+			</p>
+		</div>
+	{/if}
 	<!-- QR -->
 	<div class="rounded-xl border border-border bg-card p-5">
 		<div class="flex items-center justify-between">

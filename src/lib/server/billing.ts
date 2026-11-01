@@ -3,9 +3,15 @@ import type { Obligation, TransformedUser } from '$lib/types/AccountingDatabaseT
 
 // All billing queries use aliases o (obligations) and u (users).
 // Older imports can contain milliseconds instead of Unix seconds.
-export const applicableObligationSql = `o.deleted_at IS NULL AND (
+export const dateApplicableObligationSql = `o.deleted_at IS NULL AND (
 	u.left_at IS NULL OR
 	(CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END) < u.left_at
+)`;
+
+// An active exception removes this obligation from the user's payable balance.
+export const applicableObligationSql = `${dateApplicableObligationSql} AND NOT EXISTS (
+	SELECT 1 FROM exception_obligation eo
+	WHERE eo.obligation_id = o.id AND eo.email = u.email AND eo.voided_at IS NULL
 )`;
 
 export async function getUserObligations(database: D1Database, email: string) {
@@ -13,7 +19,7 @@ export async function getUserObligations(database: D1Database, email: string) {
 		.prepare(
 			`SELECT o.* FROM obligations o
 			JOIN users u ON u.email = ? AND u.deleted_at IS NULL
-			WHERE ${applicableObligationSql} ORDER BY o.start_date, o.id`
+			WHERE ${dateApplicableObligationSql} ORDER BY o.start_date, o.id`
 		)
 		.bind(email)
 		.all<Obligation>();

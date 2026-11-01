@@ -41,7 +41,8 @@
 		paid: { label: 'Paid', dot: 'bg-success', text: 'text-success' },
 		partial: { label: 'Partial', dot: 'bg-warning', text: 'text-warning' },
 		unpaid: { label: 'Unpaid', dot: 'bg-danger', text: 'text-danger' },
-		waiting_approval: { label: 'Waiting approval', dot: 'bg-info', text: 'text-info' }
+		waiting_approval: { label: 'Waiting approval', dot: 'bg-info', text: 'text-info' },
+		exempt: { label: 'Exempt', dot: 'bg-muted-foreground', text: 'text-muted-foreground' }
 	} as const;
 
 	const totalPaid = $derived(
@@ -93,7 +94,7 @@
 				: 'hidden'} lg:flex"
 		>
 			<div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1">
-				{#each ['paid', 'partial', 'unpaid'] as const as s (s)}
+				{#each ['paid', 'partial', 'unpaid', 'waiting_approval', 'exempt'] as const as s (s)}
 					<div class="flex items-center gap-1.5">
 						<span class="h-2.5 w-2.5 rounded-full {statusMeta[s].dot}"></span>
 						<span class="text-xs text-muted-foreground">{statusMeta[s].label}</span>
@@ -130,15 +131,22 @@
 						<span class="h-2 w-2 rounded-full {meta.dot}"></span>
 						<span class="text-xs font-medium {meta.text}">{meta.label}</span>
 						<span class="ml-auto text-xs text-muted-foreground">
-							{currency.format(selectedWeek.allocated) +
-								(selectedWeek.status === 'waiting_approval'
-									? ' + ' + currency.format(selectedWeek.pendingAllocated)
-									: '')} / {currency.format(selectedWeek.cost)}
+							{selectedWeek.status === 'exempt'
+								? 'No payment due'
+								: currency.format(selectedWeek.allocated) +
+									(selectedWeek.status === 'waiting_approval'
+										? ' + ' + currency.format(selectedWeek.pendingAllocated)
+										: '') +
+									` / ${currency.format(selectedWeek.cost)}`}
 						</span>
 					</div>
 				</div>
 			{/if}
-			<PaymentForm {selectedWeek} nextDue={data.nextDue} isAutomaticSlipCheckOn={data.isAutomaticSlipCheckOn} />
+			<PaymentForm
+				{selectedWeek}
+				nextDue={data.nextDue}
+				isAutomaticSlipCheckOn={data.isAutomaticSlipCheckOn}
+			/>
 		</aside>
 	</main>
 

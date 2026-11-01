@@ -3,5 +3,6 @@
 		"wrangler.json": "jsonc"
 	},
 	"js/ts.experimental.useTsgo": false,
-	"python-envs.defaultEnvManager": "ms-python.python:system"
+	"python-envs.defaultEnvManager": "ms-python.python:system",
+	"js/ts.tsdk.path": "node_modules\\typescript\\lib"
 }

@@ -26,6 +26,7 @@ type StudentWeek = {
 
 type ObligationWeek = AllocatedWeek & {
 	amount: number;
+	eligibleStudents: number;
 	paidStudents: number;
 	pendingStudents: number;
 	incompleteStudents: number;
@@ -62,6 +63,29 @@ export const load = async ({ platform }) => {
 		date: unixTimestampToDate(transaction.date)
 	})) as Transaction[];
 
+	const exceptions = (
+		await accountingDatabase
+			.prepare(
+				`
+				SELECT eo.obligation_id, eo.email, eo.granted_by, eo.granted_at, eo.grant_reason,
+					u.name, u.nickname
+				FROM exception_obligation eo
+				JOIN users u ON u.email = eo.email
+				WHERE eo.voided_at IS NULL
+				ORDER BY eo.granted_at DESC
+			`
+			)
+			.all<{
+				obligation_id: number;
+				email: string;
+				granted_by: string;
+				granted_at: number;
+				grant_reason: string;
+				name: string;
+				nickname: string;
+			}>()
+	).results;
+
 	const weeksById = new Map<string, ObligationWeek>();
 
 	for (const obligation of obligations) {
@@ -73,6 +97,7 @@ export const load = async ({ platform }) => {
 			label: obligation.description,
 			cost: obligation.amount,
 			amount: obligation.amount,
+			eligibleStudents: 0,
 			allocated: 0,
 			pendingAllocated: 0,
 			remaining: 0,
@@ -121,12 +146,13 @@ export const load = async ({ platform }) => {
 			};
 
 			week.students.push(student);
+			week.eligibleStudents += 1;
 			week.allocated += allocatedWeek.allocated;
 			week.pendingAllocated += allocatedWeek.pendingAllocated;
 
 			if (allocatedWeek.status === 'paid') {
 				week.paidStudents += 1;
-			} else {
+			} else if (allocatedWeek.status !== 'exempt') {
 				week.incompleteStudents += 1;
 			}
 
@@ -135,17 +161,35 @@ export const load = async ({ platform }) => {
 			}
 		}
 	}
+	for (const exception of exceptions) {
+		const week = weeksById.get(String(exception.obligation_id));
+		if (!week) continue;
+		week.students.push({
+			email: exception.email,
+			name: exception.name,
+			nickname: exception.nickname,
+			allocated: 0,
+			pendingAllocated: 0,
+			remaining: 0,
+			status: 'exempt'
+		});
+	}
 
 	const weeks = Array.from(weeksById.values()).map((week) => {
-		const remaining = Math.max(week.amount * week.students.length - week.allocated, 0);
+		const remaining = Math.max(week.amount * week.eligibleStudents - week.allocated, 0);
+		const exemptStudents = week.students.filter((student) => student.status === 'exempt').length;
 		const status: AllocatedWeek['status'] =
-			week.incompleteStudents === 0
-				? 'paid'
-				: week.pendingStudents > 0
-					? 'waiting_approval'
-					: week.paidStudents > 0
-						? 'partial'
-						: 'unpaid';
+			week.eligibleStudents === 0
+				? exemptStudents > 0
+					? 'exempt'
+					: 'paid'
+				: week.incompleteStudents === 0
+					? 'paid'
+					: week.pendingStudents > 0
+						? 'waiting_approval'
+						: week.paidStudents > 0
+							? 'partial'
+							: 'unpaid';
 
 		return {
 			...week,
@@ -162,6 +206,8 @@ export const load = async ({ platform }) => {
 
 	return {
 		totalStudents: users.length,
+		users: users.map(({ email, name, nickname }) => ({ email, name, nickname })),
+		exceptions,
 		publicObligationsEnabled: await isPublicObligationsEnabled(accountingDatabase),
 		creationPauses: await getObligationCreationPauses(accountingDatabase),
 		weeks

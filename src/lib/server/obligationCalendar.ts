@@ -8,18 +8,25 @@ function dateArray(date: Date): DateArray {
 	return [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()];
 }
 
-export function buildObligationCalendar(obligations: Obligation[], origin: string) {
+export function buildObligationCalendar(
+	obligations: Obligation[],
+	origin: string,
+	exemptObligationIds: ReadonlySet<number> = new Set()
+) {
 	const { error: calendarError, value } = createEvents(
 		obligations.map((obligation) => {
 			const { start_date, end_date } = obligationDates(obligation);
+			const exempt = exemptObligationIds.has(obligation.id);
 			const exclusiveEnd = new Date(end_date);
 			exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
 			return {
 				uid: `obligation-${obligation.id}@${new URL(origin).host}`,
 				start: dateArray(start_date),
 				end: dateArray(exclusiveEnd),
-				title: obligation.description,
-				description: `Amount: THB ${obligation.amount}\n${obligation.description}`,
+				title: exempt ? `EXEMPT · ${obligation.description}` : obligation.description,
+				description: exempt
+					? `No payment due; this obligation is exempt.\n${obligation.description}`
+					: `Amount: THB ${obligation.amount}\n${obligation.description}`,
 				url: origin,
 				transp: 'TRANSPARENT' as const,
 				classification: 'PRIVATE'
@@ -38,7 +45,12 @@ export async function calendarResponse(
 	download = false
 ) {
 	const obligations = await getUserObligations(database, email);
-	return new Response(buildObligationCalendar(obligations, origin), {
+	const exceptions = await database
+		.prepare('SELECT obligation_id FROM exception_obligation WHERE email = ? AND voided_at IS NULL')
+		.bind(email)
+		.all<{ obligation_id: number }>();
+	const exemptObligationIds = new Set(exceptions.results.map(({ obligation_id }) => obligation_id));
+	return new Response(buildObligationCalendar(obligations, origin, exemptObligationIds), {
 		headers: {
 			'Content-Type': 'text/calendar; charset=utf-8',
 			'Content-Disposition': `${download ? 'attachment' : 'inline'}; filename="obligations.ics"`,

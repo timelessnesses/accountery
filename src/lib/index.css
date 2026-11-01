@@ -149,6 +149,9 @@ body {
 .fc .fc-day.week-waiting-approval {
 	background-color: var(--color-info-muted);
 }
+.fc .fc-day.week-exempt {
+	background-color: var(--color-muted);
+}
 
 .fc .fc-daygrid-event {
 	white-space: normal;

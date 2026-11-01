@@ -39,7 +39,9 @@ export async function scheduled(
 		const recipients = await env.AccountingDatabase.prepare(
 			`SELECT email, remaining FROM (
 			SELECT u.email, ROUND((SELECT COALESCE(SUM(o.amount), 0) FROM obligations o WHERE o.deleted_at IS NULL
-				AND (CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END) <= ?)
+				AND (CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END) <= ?
+				AND NOT EXISTS (SELECT 1 FROM exception_obligation eo
+					WHERE eo.obligation_id = o.id AND eo.email = u.email AND eo.voided_at IS NULL))
 				- (SELECT COALESCE(SUM(t.amount), 0) FROM transactions t WHERE t.email = u.email AND t.approved IN ('approved', 'pending')), 2) remaining
 			FROM users u WHERE ${where}
 			) WHERE remaining > 0`

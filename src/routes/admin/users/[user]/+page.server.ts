@@ -18,14 +18,28 @@ export const load = async ({ params, platform, locals }) => {
 			.all<Transaction>()
 	).results.map((transaction) => ({ ...transaction, date: unixTimestampToDate(transaction.date) }));
 	const allObligations = await getUserObligations(database, params.user);
-	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
+	const exceptions = await database
+		.prepare('SELECT obligation_id FROM exception_obligation WHERE email = ? AND voided_at IS NULL')
+		.bind(params.user)
+		.all<{ obligation_id: number }>();
+	const exemptObligationIds = new Set(
+		exceptions.results.map(({ obligation_id }) => String(obligation_id))
+	);
+	const allocatedWeeks = buildAllocatedWeeks(
+		allObligations,
+		allTransactionsFromUser,
+		exemptObligationIds
+	);
+	const payableObligations = allObligations.filter(
+		(obligation) => !exemptObligationIds.has(String(obligation.id))
+	);
 
 	return {
 		user,
 		netUser: user,
 		allTransactionsFromUser,
-		allObligations,
-		nextDue: allocatedWeeks.find((week) => week.status !== 'paid'),
+		allObligations: payableObligations,
+		nextDue: allocatedWeeks.find((week) => week.status !== 'paid' && week.status !== 'exempt'),
 		allocatedWeeks
 	};
 };

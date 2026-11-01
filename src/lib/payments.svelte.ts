@@ -2,7 +2,7 @@
 
 import { SvelteDate } from 'svelte/reactivity';
 
-export type WeekStatus = 'paid' | 'partial' | 'unpaid' | 'waiting_approval';
+export type WeekStatus = 'paid' | 'partial' | 'unpaid' | 'waiting_approval' | 'exempt';
 
 export interface Obligation {
 	id: string;

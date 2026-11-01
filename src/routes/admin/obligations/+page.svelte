@@ -1,8 +1,10 @@
 <script lang="ts">
 	import AdminPageHeader from '$lib/admin/AdminPageHeader.svelte';
 	import { resolve } from '$app/paths';
+	import { invalidateAll } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
+	import { tick } from 'svelte';
 	import { positiveId } from '$lib/logTargets';
 	import { auditFocus } from '$lib/auditFocus';
 	import type { PageProps } from './$types';
@@ -51,34 +53,84 @@
 	let createEnd = $state('');
 	let editStart = $derived(selectedWeek?.dayStart ?? '');
 	let editEnd = $derived(selectedWeek?.dayEnd ?? '');
+	type TargetUser = { email: string; name: string; nickname: string };
+	let exceptionSearch = $state('');
+	let exceptionUser = $state<TargetUser | null>(null);
+	let exceptionReason = $state('');
+	let exceptionOpen = $state(false);
+	let exceptionActiveIndex = $state(-1);
+	let exceptionSubmitting = $state(false);
+	let voidingExceptionEmail = $state('');
+	let exceptionMessage = $state('');
+	let exceptionFailed = $state(false);
+	let exceptionInput: HTMLInputElement;
+	const exceptionMatches = $derived(
+		data.users
+			.filter((user: TargetUser) =>
+				[user.name, user.nickname, user.email].some((value) =>
+					value.toLocaleLowerCase().includes(exceptionSearch.trim().toLocaleLowerCase())
+				)
+			)
+			.filter(
+				(user: TargetUser) =>
+					!data.exceptions.some(
+						(exception: { obligation_id: number; email: string }) =>
+							exception.obligation_id === Number(selectedWeek?.id) && exception.email === user.email
+					)
+			)
+			.slice(0, 10)
+	);
+	const selectedExceptions = $derived(
+		data.exceptions.filter(
+			(exception: { obligation_id: number }) => exception.obligation_id === Number(selectedWeek?.id)
+		)
+	);
 
 	const selectedPaidStudents = $derived(
 		selectedWeek?.students.filter((student) => student.status === 'paid') ?? []
 	);
 	const selectedIncompleteStudents = $derived(
-		selectedWeek?.students.filter((student) => student.status !== 'paid') ?? []
+		selectedWeek?.students.filter(
+			(student) => student.status !== 'paid' && student.status !== 'exempt'
+		) ?? []
+	);
+	const selectedExemptStudents = $derived(
+		selectedWeek?.students.filter((student) => student.status === 'exempt') ?? []
 	);
 
 	function selectWeek(week: AllocatedWeek) {
-		selectedId = week.id;
+		selectObligation(week.id);
+	}
+
+	function selectObligation(id: string) {
+		if (selectedId !== id) {
+			exceptionSearch = '';
+			exceptionUser = null;
+			exceptionReason = '';
+			exceptionMessage = '';
+		}
+		selectedId = id;
 	}
 
 	function calendarTitle(week: AllocatedWeek) {
 		const w = week as ObligationWeek;
-		const total = w.students.length;
+		const total = w.eligibleStudents;
+		const exempt = w.students.filter((student) => student.status === 'exempt').length;
 		const people = (n: number) => `${n} ${n === 1 ? 'person' : 'people'}`;
-		if (total === 0) return 'No students';
+		if (total === 0) return exempt > 0 ? `${people(exempt)} exempt` : 'No students';
 		const paidPart = `${w.paidStudents} / ${total} ${total === 1 ? 'person' : 'people'} paid`;
-		return w.pendingStudents > 0
-			? `${paidPart} (${people(w.pendingStudents)} waiting to be approved)`
-			: paidPart;
+		const title =
+			w.pendingStudents > 0
+				? `${paidPart} (${people(w.pendingStudents)} waiting to be approved)`
+				: paidPart;
+		return exempt > 0 ? `${title} · ${people(exempt)} exempt` : title;
 	}
 
 	function handleWeekRowKeydown(event: KeyboardEvent, week: ObligationWeek) {
 		if (event.key !== 'Enter' && event.key !== ' ') return;
 
 		event.preventDefault();
-		selectedId = week.id;
+		selectObligation(week.id);
 	}
 
 	function statusClass(status: AllocatedWeek['status']) {
@@ -88,7 +140,100 @@
 				? 'bg-info/10 text-info'
 				: status === 'partial'
 					? 'bg-warning/10 text-warning'
-					: 'bg-danger/10 text-danger';
+					: status === 'exempt'
+						? 'bg-muted text-muted-foreground'
+						: 'bg-danger/10 text-danger';
+	}
+
+	function selectExceptionUser(user: TargetUser) {
+		exceptionUser = user;
+		exceptionSearch = `${user.name}${user.nickname ? ` (${user.nickname})` : ''} · ${user.email}`;
+		exceptionOpen = false;
+		exceptionActiveIndex = -1;
+	}
+
+	async function handleExceptionKeydown(event: KeyboardEvent) {
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			event.preventDefault();
+			exceptionOpen = true;
+			exceptionActiveIndex = exceptionMatches.length
+				? exceptionActiveIndex < 0
+					? event.key === 'ArrowDown'
+						? 0
+						: exceptionMatches.length - 1
+					: (exceptionActiveIndex +
+							(event.key === 'ArrowDown' ? 1 : -1) +
+							exceptionMatches.length) %
+						exceptionMatches.length
+				: -1;
+			await tick();
+			document
+				.getElementById(`obligation-exception-option-${exceptionActiveIndex}`)
+				?.scrollIntoView({ block: 'nearest' });
+		} else if (event.key === 'Enter' && exceptionOpen) {
+			event.preventDefault();
+			if (exceptionMatches[exceptionActiveIndex])
+				selectExceptionUser(exceptionMatches[exceptionActiveIndex]);
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			exceptionOpen = false;
+		}
+	}
+
+	async function grantException() {
+		if (!selectedWeek || !exceptionUser || !exceptionReason.trim() || exceptionSubmitting) return;
+		exceptionSubmitting = true;
+		exceptionMessage = '';
+		exceptionFailed = false;
+		try {
+			const response = await fetch(resolve(`/admin/obligations/${selectedWeek.id}/exempt`), {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					users: [{ email: exceptionUser.email }],
+					grant_reason: exceptionReason
+				})
+			});
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok) throw new Error(result.error ?? 'Unable to grant this exception.');
+			exceptionMessage = `Exception granted to ${exceptionUser.email}.`;
+			exceptionSearch = '';
+			exceptionUser = null;
+			exceptionReason = '';
+			await invalidateAll();
+		} catch (error) {
+			exceptionFailed = true;
+			exceptionMessage = error instanceof Error ? error.message : 'Unable to grant this exception.';
+		} finally {
+			exceptionSubmitting = false;
+		}
+	}
+
+	async function voidException(email: string) {
+		if (!selectedWeek || voidingExceptionEmail) return;
+		if (
+			!window.confirm(`Void the exception for ${email}? The user will owe this obligation again.`)
+		)
+			return;
+		voidingExceptionEmail = email;
+		exceptionMessage = '';
+		exceptionFailed = false;
+		try {
+			const response = await fetch(resolve(`/admin/obligations/${selectedWeek.id}/exempt`), {
+				method: 'DELETE',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ email })
+			});
+			const result = await response.json().catch(() => ({}));
+			if (!response.ok) throw new Error(result.error ?? 'Unable to void this exception.');
+			exceptionMessage = `Exception for ${email} voided.`;
+			await invalidateAll();
+		} catch (error) {
+			exceptionFailed = true;
+			exceptionMessage = error instanceof Error ? error.message : 'Unable to void this exception.';
+		} finally {
+			voidingExceptionEmail = '';
+		}
 	}
 </script>
 
@@ -311,7 +456,7 @@
 		class="min-w-0 rounded-xl border border-border bg-card p-3 sm:p-4"
 	>
 		<p class="mb-4 text-sm text-muted-foreground">
-			People paid out of everyone assigned to each obligation. Pending approvals appear in
+			Payment progress excludes users with an active exception. Pending approvals appear in
 			parentheses.
 		</p>
 		<PaymentCalendar {weeks} onselect={selectWeek} titleFormat={calendarTitle} fitContent />
@@ -340,7 +485,7 @@
 							aria-pressed={selectedWeek?.id === week.id}
 							class={(selectedWeek?.id === week.id ? 'bg-info/10 ' : '') +
 								'cursor-pointer focus-visible:bg-muted/50 focus-visible:outline-none'}
-							onclick={() => (selectedId = week.id)}
+							onclick={() => selectObligation(week.id)}
 							onkeydown={(event) => handleWeekRowKeydown(event, week)}
 						>
 							<Table.Cell>
@@ -352,7 +497,7 @@
 							<Table.Cell class="max-w-[260px] truncate">{week.label}</Table.Cell>
 							<Table.Cell class="text-right">{currency.format(week.amount)}</Table.Cell>
 							<Table.Cell class="text-right">
-								{week.paidStudents} / {week.students.length}
+								{week.paidStudents} / {week.eligibleStudents}
 							</Table.Cell>
 							<Table.Cell class="text-right">{week.incompleteStudents}</Table.Cell>
 							<Table.Cell class="text-right">
@@ -388,7 +533,7 @@
 					<p class="text-sm text-muted-foreground">
 						{formatWeekRange(selectedWeek.dayStart, selectedWeek.dayEnd)}
 					</p>
-					<div class="mt-3 grid grid-cols-2 gap-2 text-sm">
+					<div class="mt-3 grid grid-cols-3 gap-2 text-sm">
 						<div class="rounded-md bg-success/10 p-2 text-success">
 							<p class="text-xs">Paid</p>
 							<p class="font-semibold">{selectedPaidStudents.length}</p>
@@ -397,7 +542,148 @@
 							<p class="text-xs">Incomplete</p>
 							<p class="font-semibold">{selectedIncompleteStudents.length}</p>
 						</div>
+						<div class="rounded-md bg-muted p-2 text-muted-foreground">
+							<p class="text-xs">Exempt</p>
+							<p class="font-semibold">{selectedExemptStudents.length}</p>
+						</div>
 					</div>
+				</div>
+
+				<div class="border-b border-border p-4">
+					<h3 class="text-sm font-semibold">User exceptions</h3>
+					<p class="mt-1 text-xs text-muted-foreground">
+						An exception removes this obligation from the selected user’s balance.
+					</p>
+					{#if selectedExceptions.length}
+						<ul class="mt-3 space-y-2">
+							{#each selectedExceptions as exception (exception.email)}
+								<li class="rounded-md border border-border p-2 text-xs">
+									<div class="flex items-start justify-between gap-2">
+										<div class="min-w-0">
+											<p class="break-all font-medium">
+												{exception.nickname || exception.name} · {exception.email}
+											</p>
+											<p class="mt-0.5 text-muted-foreground">{exception.grant_reason}</p>
+										</div>
+										<Button
+											variant="destructive"
+											type="button"
+											disabled={readOnly || !!voidingExceptionEmail}
+											aria-label={`Void exception for ${exception.email}`}
+											onclick={() => voidException(exception.email)}
+										>
+											{voidingExceptionEmail === exception.email ? 'Voiding…' : 'Void'}
+										</Button>
+									</div>
+								</li>
+							{/each}
+						</ul>
+					{:else}
+						<p class="mt-2 text-xs text-muted-foreground">No user exceptions.</p>
+					{/if}
+					<form
+						class="mt-3 space-y-3"
+						onsubmit={(event) => {
+							event.preventDefault();
+							void grantException();
+						}}
+					>
+						<fieldset disabled={readOnly || exceptionSubmitting} class="space-y-3">
+							<div class="relative">
+								<label for="obligation-exception-user" class="mb-1 block text-xs font-medium"
+									>Add exception for</label
+								>
+								<input
+									bind:this={exceptionInput}
+									bind:value={exceptionSearch}
+									id="obligation-exception-user"
+									role="combobox"
+									aria-autocomplete="list"
+									aria-expanded={exceptionOpen}
+									aria-controls="obligation-exception-options"
+									aria-activedescendant={exceptionOpen && exceptionActiveIndex >= 0
+										? `obligation-exception-option-${exceptionActiveIndex}`
+										: undefined}
+									autocomplete="off"
+									placeholder="Search by name, nickname, or email"
+									class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+									oninput={() => {
+										exceptionUser = null;
+										exceptionOpen = true;
+										exceptionActiveIndex = -1;
+									}}
+									onfocus={() => {
+										if (!exceptionUser) exceptionOpen = true;
+									}}
+									onblur={() => {
+										exceptionOpen = false;
+									}}
+									onkeydown={handleExceptionKeydown}
+								/>
+								{#if exceptionOpen}
+									<div
+										id="obligation-exception-options"
+										role="listbox"
+										aria-label="Matching users"
+										class="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-border bg-card p-1 shadow-lg"
+									>
+										{#each exceptionMatches as user, index (user.email)}
+											<button
+												type="button"
+												role="option"
+												id={`obligation-exception-option-${index}`}
+												aria-selected={exceptionActiveIndex === index}
+												tabindex={-1}
+												class={`block w-full rounded px-3 py-2 text-left text-sm hover:bg-muted ${exceptionActiveIndex === index ? 'bg-muted' : ''}`}
+												onpointerdown={(event) => event.preventDefault()}
+												onclick={() => {
+													selectExceptionUser(user);
+													exceptionInput.focus();
+												}}
+											>
+												<span class="block font-medium"
+													>{user.name}{user.nickname ? ` (${user.nickname})` : ''}</span
+												>
+												<span class="block break-all text-xs text-muted-foreground"
+													>{user.email}</span
+												>
+											</button>
+										{:else}
+											<p class="px-3 py-2 text-xs text-muted-foreground">No matching users.</p>
+										{/each}
+									</div>
+								{/if}
+							</div>
+							<label class="block space-y-1">
+								<span class="text-xs font-medium">Reason</span>
+								<textarea
+									bind:value={exceptionReason}
+									maxlength="500"
+									required
+									rows="2"
+									class="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm"
+									placeholder="Why is this user exempt?"
+								/>
+							</label>
+							<Button
+								type="submit"
+								disabled={!exceptionUser ||
+									!exceptionReason.trim() ||
+									readOnly ||
+									exceptionSubmitting}
+							>
+								{exceptionSubmitting ? 'Saving…' : 'Grant exception'}
+							</Button>
+						</fieldset>
+					</form>
+					{#if exceptionMessage}
+						<p
+							role={exceptionFailed ? 'alert' : 'status'}
+							class={`mt-3 rounded-md border p-2 text-xs ${exceptionFailed ? 'border-danger/30 bg-danger/10 text-danger' : 'border-success/30 bg-success/10 text-success'}`}
+						>
+							{exceptionMessage}
+						</p>
+					{/if}
 				</div>
 
 				<div class="max-h-[620px] divide-y divide-border overflow-y-auto">
@@ -428,9 +714,32 @@
 					</div>
 
 					<div class="p-4">
+						<h3 class="mb-2 text-xs font-semibold text-muted-foreground">Exempt students</h3>
+						{#if selectedExemptStudents.length === 0}
+							<p class="text-sm text-muted-foreground">No users are exempt from this obligation.</p>
+						{:else}
+							<ul class="space-y-2">
+								{#each selectedExemptStudents as student (student.email)}
+									<li class="rounded-md border border-border p-2">
+										<a
+											href={resolve(`/admin/users/${student.email}`)}
+											class="text-sm font-medium text-primary underline-offset-4 hover:underline"
+										>
+											{student.nickname || student.name}
+										</a>
+										<p class="text-xs text-muted-foreground">{student.email}</p>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+					</div>
+
+					<div class="p-4">
 						<h3 class="mb-2 text-xs font-semibold text-danger">Incomplete students</h3>
 						{#if selectedIncompleteStudents.length === 0}
-							<p class="text-sm text-muted-foreground">Everyone has completed this obligation.</p>
+							<p class="text-sm text-muted-foreground">
+								All non-exempt users have completed this obligation.
+							</p>
 						{:else}
 							<ul class="space-y-2">
 								{#each selectedIncompleteStudents as student (student.email)}

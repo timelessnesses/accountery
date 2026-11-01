@@ -24,7 +24,8 @@
 			label: 'Waiting approval',
 			dot: 'bg-info',
 			text: 'text-info'
-		}
+		},
+		exempt: { label: 'Exempt', dot: 'bg-muted-foreground', text: 'text-muted-foreground' }
 	} as const;
 
 	const info = $derived(data.user);
@@ -101,27 +102,33 @@
 					</span>
 				</div>
 
-				<div class="mt-4 space-y-2 text-sm">
-					<div class="flex justify-between">
-						<span>Cost</span>
-						<span>{currency.format(selectedWeek.cost)}</span>
-					</div>
+				{#if selectedWeek.status === 'exempt'}
+					<p class="mt-4 text-sm text-muted-foreground">
+						This obligation is excluded from the user's balance and payment allocation.
+					</p>
+				{:else}
+					<div class="mt-4 space-y-2 text-sm">
+						<div class="flex justify-between">
+							<span>Cost</span>
+							<span>{currency.format(selectedWeek.cost)}</span>
+						</div>
 
-					<div class="flex justify-between">
-						<span>Approved</span>
-						<span>{currency.format(selectedWeek.allocated)}</span>
-					</div>
+						<div class="flex justify-between">
+							<span>Approved</span>
+							<span>{currency.format(selectedWeek.allocated)}</span>
+						</div>
 
-					<div class="flex justify-between">
-						<span>Pending</span>
-						<span>{currency.format(selectedWeek.pendingAllocated)}</span>
-					</div>
+						<div class="flex justify-between">
+							<span>Pending</span>
+							<span>{currency.format(selectedWeek.pendingAllocated)}</span>
+						</div>
 
-					<div class="flex justify-between font-semibold">
-						<span>Remaining</span>
-						<span>{currency.format(selectedWeek.remaining)}</span>
+						<div class="flex justify-between font-semibold">
+							<span>Remaining</span>
+							<span>{currency.format(selectedWeek.remaining)}</span>
+						</div>
 					</div>
-				</div>
+				{/if}
 			{:else}
 				<div class="flex h-full items-center justify-center text-sm text-muted-foreground">
 					Select a week on the calendar

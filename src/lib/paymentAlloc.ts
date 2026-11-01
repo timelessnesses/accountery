@@ -4,7 +4,8 @@ import type { Obligation, Transaction } from './types/AccountingDatabaseTypes';
 
 export function buildAllocatedWeeks(
 	obligations: Obligation[],
-	transactions: Transaction[]
+	transactions: Transaction[],
+	exemptObligationIds: ReadonlySet<string> = new Set<string>()
 ): AllocatedWeek[] {
 	const sortedObligations = [...obligations].sort(
 		(a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
@@ -21,6 +22,20 @@ export function buildAllocatedWeeks(
 	return sortedObligations.map((obligation) => {
 		const cost = obligation.amount;
 		const { start_date, end_date } = obligationDates(obligation);
+		const id = obligation.id.toString();
+		if (exemptObligationIds.has(id)) {
+			return {
+				id,
+				dayStart: start_date.toISOString().slice(0, 10),
+				dayEnd: end_date.toISOString().slice(0, 10),
+				label: obligation.description,
+				cost,
+				allocated: 0,
+				remaining: 0,
+				pendingAllocated: 0,
+				status: 'exempt' as const
+			};
+		}
 
 		let allocated = 0;
 		let pendingAllocated = 0;
@@ -54,7 +69,7 @@ export function buildAllocatedWeeks(
 		}
 
 		return {
-			id: obligation.id.toString(),
+			id,
 			dayStart: start_date.toISOString().slice(0, 10),
 			dayEnd: end_date.toISOString().slice(0, 10),
 			label: obligation.description,

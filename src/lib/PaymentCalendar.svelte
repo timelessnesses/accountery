@@ -24,27 +24,31 @@
 		paid: 'week-paid',
 		partial: 'week-partial',
 		unpaid: 'week-unpaid',
-		waiting_approval: 'week-waiting-approval'
+		waiting_approval: 'week-waiting-approval',
+		exempt: 'week-exempt'
 	};
 
 	const STATUS_COLOR: Record<AllocatedWeek['status'], string> = {
 		paid: 'var(--color-success)',
 		partial: 'var(--color-warning)',
 		unpaid: 'var(--color-danger)',
-		waiting_approval: 'var(--color-info)'
+		waiting_approval: 'var(--color-info)',
+		exempt: 'var(--color-muted)'
 	};
 
 	function buildEvents(list: AllocatedWeek[]) {
 		return list.map((w) => {
 			const title =
 				titleFormat?.(w) ??
-				(w.status === 'paid'
-					? `Paid · ${currency.format(w.cost)}`
-					: w.status === 'partial'
-						? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
-						: w.status === 'waiting_approval'
-							? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
-							: `Unpaid · ${currency.format(w.cost)}`);
+				(w.status === 'exempt'
+					? 'Exempt · no payment due'
+					: w.status === 'paid'
+						? `Paid · ${currency.format(w.cost)}`
+						: w.status === 'partial'
+							? `Partial · ${currency.format(w.allocated)} / ${currency.format(w.cost)}`
+							: w.status === 'waiting_approval'
+								? `Waiting approval (${currency.format(w.pendingAllocated)}) · ${currency.format(w.allocated)} + ${currency.format(w.pendingAllocated)} / ${currency.format(w.cost)}`
+								: `Unpaid · ${currency.format(w.cost)}`);
 			return {
 				id: w.id,
 				start: w.dayStart,
@@ -54,7 +58,7 @@
 				title,
 				backgroundColor: STATUS_COLOR[w.status],
 				borderColor: STATUS_COLOR[w.status],
-				textColor: '#fff',
+				textColor: w.status === 'exempt' ? 'var(--color-foreground)' : '#fff',
 				extendedProps: { week: w }
 			};
 		});
@@ -62,7 +66,7 @@
 
 	// For overlapping ranges, show the most urgent payment status on the day.
 	function dayClass(list: AllocatedWeek[], iso: string) {
-		const priority = { paid: 0, waiting_approval: 1, partial: 2, unpaid: 3 };
+		const priority = { exempt: -1, paid: 0, waiting_approval: 1, partial: 2, unpaid: 3 };
 		const matching = list.filter((w) => w.dayStart <= iso && iso <= w.dayEnd);
 		matching.sort((a, b) => priority[b.status] - priority[a.status]);
 		return matching.length ? [STATUS_CLASS[matching[0].status]] : [];

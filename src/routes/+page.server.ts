@@ -26,15 +26,29 @@ export const load = async ({ locals, platform }) => {
 		date: unixTimestampToDate(transaction.date)
 	})) as Transaction[];
 	const allObligations = await getUserObligations(accountingDatabase, locals.user.email);
-	const allocatedWeeks = buildAllocatedWeeks(allObligations, allTransactionsFromUser);
-	const nextDue = allocatedWeeks.find((week) => week.status !== 'paid');
+	const obligationsExempt = await accountingDatabase
+		.prepare('SELECT * FROM exception_obligation WHERE email = ? AND voided_at IS NULL')
+		.bind(locals.user.email)
+		.all<{ obligation_id: number }>();
+	const exemptObligationIds = new Set(
+		obligationsExempt.results.map((exemption) => String(exemption.obligation_id))
+	);
+	const allocatedWeeks = buildAllocatedWeeks(
+		allObligations,
+		allTransactionsFromUser,
+		exemptObligationIds
+	);
 	const isAutomaticSlipCheckOn = await isAutomaticSlipProcessingEnabled(accountingDatabase);
+	const payableObligations = allObligations.filter(
+		(obligation) => !exemptObligationIds.has(String(obligation.id))
+	);
+	const nextDue = allocatedWeeks.find((week) => week.status !== 'paid' && week.status !== 'exempt');
 
 	return {
 		publicObligationsEnabled: await isPublicObligationsEnabled(accountingDatabase),
 		user: locals.user,
 		transaction: allTransactionsFromUser,
-		obligations: allObligations,
+		obligations: payableObligations,
 		allocatedWeeks,
 		nextDue,
 		isAutomaticSlipCheckOn

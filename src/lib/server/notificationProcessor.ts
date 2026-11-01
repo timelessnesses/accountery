@@ -89,11 +89,13 @@ export async function processNotification(
 			const balance = await db
 				.prepare(
 					`SELECT
-				(SELECT COALESCE(SUM(amount), 0) FROM obligations WHERE deleted_at IS NULL
-				AND (CASE WHEN start_date >= 10000000000 THEN start_date / 1000 ELSE start_date END) <= ?)
+				(SELECT COALESCE(SUM(o.amount), 0) FROM obligations o WHERE o.deleted_at IS NULL
+				AND (CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END) <= ?
+				AND NOT EXISTS (SELECT 1 FROM exception_obligation eo
+					WHERE eo.obligation_id = o.id AND eo.email = ? AND eo.voided_at IS NULL))
 				- (SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE email = ? AND approved IN ('approved', 'pending')) AS remaining`
 				)
-				.bind(Date.parse(day + 'T00:00:00Z') / 1000, email)
+				.bind(Date.parse(day + 'T00:00:00Z') / 1000, email, email)
 				.first<{ remaining: number }>();
 			if (!balance || balance.remaining <= 0) return;
 		}
