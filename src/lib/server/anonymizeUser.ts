@@ -88,7 +88,7 @@ export async function anonymizeDepartedUser(
 			.prepare(
 				`UPDATE slipok_cache SET slipok_response = json_object(
 			'success', json('false'), 'code', 'ANONYMIZED', 'message', 'Receipt removed after departure',
-			'data', json_object('transRef', trans_ref, 'sendingBank', sending_bank))
+			'data', json_object())
 			WHERE transaction_id IN (SELECT id FROM transactions WHERE email = ?)`
 			)
 			.bind(email),
