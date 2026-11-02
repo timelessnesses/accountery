@@ -13,7 +13,7 @@ async function sendWebPush(...args: Parameters<typeof webPush.generateRequestDet
 		headers: request.headers,
 		body: request.body ? Uint8Array.from(request.body).buffer : undefined,
 		signal: AbortSignal.timeout(15000),
-		redirect: 'error'
+		redirect: 'manual'
 	});
 	if (!response.ok)
 		throw Object.assign(new Error(`Push provider returned HTTP ${response.status}`), {
