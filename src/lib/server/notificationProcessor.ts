@@ -160,7 +160,7 @@ export async function processNotification(
 				try {
 					const { error } = await resend.emails.send(
 						{
-							from: 'accountery@timelessnesses.me',
+							from: 'automated@accounting.timelessnesses.me',
 							to: recipient.email,
 							subject: notification.data.title,
 							text: notification.data.body
