@@ -105,9 +105,13 @@
 			aria-busy={refreshing}
 		>
 			<div class="summary-card">
-				<h3>Obligations fulfilled</h3>
-				<p class="summary-value text-success">{data.summary.fulfilledObligations}</p>
-				<p class="text-xs text-muted-foreground">Fully paid or exempt obligations.</p>
+				<h3>Approved toward obligations</h3>
+				<p class="summary-value text-success">
+					{currency.format(data.summary.approvedObligationAmount)}
+				</p>
+				<p class="text-xs text-muted-foreground">
+					Approved payments applied to assigned, payable obligations.
+				</p>
 			</div>
 			<div class="summary-card">
 				<h3>Unpaid amount</h3>
@@ -151,7 +155,7 @@
 					class="completion-progress mt-4"
 					max={data.summary.totalObligations}
 					value={data.summary.fulfilledObligations}
-					aria-label="Assigned obligations fully paid">{completion}%</progress
+					aria-label="Assigned obligations fulfilled by payment or exemption">{completion}%</progress
 				>
 			{/if}
 			{#if data.summary.totalObligations === 0}
