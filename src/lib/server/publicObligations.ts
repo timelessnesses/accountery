@@ -1,5 +1,5 @@
 import { fail, type Actions } from '@sveltejs/kit';
-import { applicableObligationSql } from './billing';
+import { dateApplicableObligationSql } from './billing';
 import { requireAdmin } from './admin';
 import { auditLogStatement } from './auditLog';
 
@@ -11,7 +11,6 @@ export type PublicObligationSummary = {
 	remainingAfterPending: number;
 	totalObligations: number;
 	fulfilledObligations: number;
-	approvedCents: number;
 };
 
 export async function isPublicObligationsEnabled(database: D1Database) {
@@ -37,18 +36,21 @@ export async function getPublicObligationSummary(database: D1Database) {
 		), assigned AS (
 			SELECT u.email, u.approvedCents, u.pendingCents,
 				CAST(ROUND(o.amount * 100) AS INTEGER) AS amountCents,
-				SUM(CAST(ROUND(o.amount * 100) AS INTEGER)) OVER (
+				CASE WHEN eo.obligation_id IS NULL THEN 0 ELSE 1 END AS isExempt,
+				SUM(CASE WHEN eo.obligation_id IS NULL THEN CAST(ROUND(o.amount * 100) AS INTEGER) ELSE 0 END) OVER (
 					PARTITION BY u.email
 					ORDER BY CASE WHEN o.start_date >= 10000000000 THEN o.start_date / 1000 ELSE o.start_date END, o.id
 					ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
 				) AS dueCents
-			FROM funds u JOIN obligations o ON ${applicableObligationSql}
+			FROM funds u JOIN obligations o ON ${dateApplicableObligationSql}
+			LEFT JOIN exception_obligation eo
+				ON eo.obligation_id = o.id AND eo.email = u.email AND eo.voided_at IS NULL
 		), balances AS (
 			SELECT email, MAX(dueCents) AS dueCents, approvedCents, pendingCents
 			FROM assigned GROUP BY email
 		), counts AS (
 			SELECT COUNT(*) AS totalObligations,
-				COUNT(CASE WHEN amountCents > 0 AND dueCents > approvedCents THEN 1 END) AS unfulfilledObligations
+				COUNT(CASE WHEN isExempt = 0 AND amountCents > 0 AND dueCents > approvedCents THEN 1 END) AS unfulfilledObligations
 			FROM assigned
 		)
 		SELECT
@@ -56,8 +58,7 @@ export async function getPublicObligationSummary(database: D1Database) {
 			unfulfilledObligations,
 			(SELECT COUNT(*) FROM balances WHERE dueCents > approvedCents) AS studentsWithUnpaidObligations,
 			COALESCE((SELECT SUM(MAX(dueCents - approvedCents - MAX(pendingCents, 0), 0)) FROM balances), 0) / 100.0 AS remainingAfterPending,
-			totalObligations, totalObligations - unfulfilledObligations AS fulfilledObligations, COALESCE((SELECT SUM(CAST(ROUND(amount * 100) AS INTEGER))
-          FROM transactions WHERE approved = 'approved'), 0) / 100.0 AS approvedCents
+			totalObligations, totalObligations - unfulfilledObligations AS fulfilledObligations
 		FROM counts WHERE EXISTS (
 			SELECT 1 FROM app_settings WHERE key = 'public_obligations_enabled' AND value = '1'
 		)

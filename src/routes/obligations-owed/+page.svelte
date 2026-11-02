@@ -105,9 +105,9 @@
 			aria-busy={refreshing}
 		>
 			<div class="summary-card">
-				<h3>Approved Amount</h3>
-				<p class="summary-value text-success">{currency.format(data.summary.approvedCents)}</p>
-				<p class="text-xs text-muted-foreground">Total approved amount.</p>
+				<h3>Obligations fulfilled</h3>
+				<p class="summary-value text-success">{data.summary.fulfilledObligations}</p>
+				<p class="text-xs text-muted-foreground">Fully paid or exempt obligations.</p>
 			</div>
 			<div class="summary-card">
 				<h3>Unpaid amount</h3>
@@ -139,7 +139,7 @@
 					<h2>Obligation completion</h2>
 					<p class="mt-1 text-sm text-muted-foreground">
 						{data.summary.fulfilledObligations} of {data.summary.totalObligations} assigned obligations
-						are fully paid.
+						are fulfilled through payment or exemption.
 					</p>
 				</div>
 				{#if data.summary.totalObligations > 0}<span
@@ -171,7 +171,8 @@
 				</p>
 				<p class="mt-2 text-xs">
 					Each student's assigned obligations are counted separately. Partial payments remain
-					unfulfilled until fully paid. Approved payments cover the oldest obligations first.
+					unfulfilled until fully paid. Exempt obligations count as fulfilled and add nothing to the
+					amount owed. Approved payments cover the oldest payable obligations first.
 				</p>
 			</div>
 		</section>
