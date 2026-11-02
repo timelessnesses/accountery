@@ -105,9 +105,9 @@
 			aria-busy={refreshing}
 		>
 			<div class="summary-card">
-				<h3>Obligation Money Collected amount</h3>
+				<h3>Approved Amount</h3>
 				<p class="summary-value text-success">{currency.format(data.summary.approvedCents)}</p>
-				<p class="text-xs text-muted-foreground">Total still owed after approved payments.</p>
+				<p class="text-xs text-muted-foreground">Total approved amount.</p>
 			</div>
 			<div class="summary-card">
 				<h3>Unpaid amount</h3>
