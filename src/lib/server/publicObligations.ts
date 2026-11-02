@@ -50,7 +50,7 @@ export async function getPublicObligationSummary(database: D1Database) {
 			SELECT email, MAX(dueCents) AS dueCents, approvedCents, pendingCents
 			FROM assigned GROUP BY email
 		), counts AS (
-			SELECT COUNT(*) AS totalObligations,
+			SELECT COUNT(CASE WHEN isExempt = 0 THEN 1 END) AS totalObligations,
 				COUNT(CASE WHEN isExempt = 0 AND amountCents > 0 AND dueCents > approvedCents THEN 1 END) AS unfulfilledObligations
 			FROM assigned
 		)
