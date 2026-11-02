@@ -11,6 +11,7 @@ export type PublicObligationSummary = {
 	remainingAfterPending: number;
 	totalObligations: number;
 	fulfilledObligations: number;
+	approvedCents: number;
 };
 
 export async function isPublicObligationsEnabled(database: D1Database) {
@@ -55,7 +56,8 @@ export async function getPublicObligationSummary(database: D1Database) {
 			unfulfilledObligations,
 			(SELECT COUNT(*) FROM balances WHERE dueCents > approvedCents) AS studentsWithUnpaidObligations,
 			COALESCE((SELECT SUM(MAX(dueCents - approvedCents - MAX(pendingCents, 0), 0)) FROM balances), 0) / 100.0 AS remainingAfterPending,
-			totalObligations, totalObligations - unfulfilledObligations AS fulfilledObligations
+			totalObligations, totalObligations - unfulfilledObligations AS fulfilledObligations, COALESCE((SELECT SUM(CAST(ROUND(amount * 100) AS INTEGER))
+          FROM transactions WHERE approved = 'approved'), 0) / 100.0 AS approvedCents
 		FROM counts WHERE EXISTS (
 			SELECT 1 FROM app_settings WHERE key = 'public_obligations_enabled' AND value = '1'
 		)
