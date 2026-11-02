@@ -13,7 +13,14 @@ export async function queue(batch: MessageBatch<NotificationMessage>, env: Notif
 			await processNotification(message.body, message.body?.id ?? message.id, env);
 			message.ack();
 		} catch (err) {
-			console.error('Notification delivery failed:', err);
+			if (err instanceof AggregateError) {
+				console.error(`Notification delivery failed (${err.errors.length} failures)`);
+				for (const e of err.errors) {
+					console.error(' -', e instanceof Error ? `${e.message} (status ${(e as any).statusCode ?? 'n/a'})` : String(e));
+				}
+			} else {
+				console.error('Notification delivery failed:', err);
+			}
 			message.retry({ delaySeconds: Math.min(3600, 60 * 2 ** (message.attempts - 1)) });
 		}
 	}
