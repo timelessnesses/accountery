@@ -53,6 +53,10 @@
 				"binding": "NotificationQueue"
 			}
 		]
+	},
+
+	"images": {
+		"binding": "CloudflareImageManipulator5000"
 	}
 	/* 
 	"durable_objects": {

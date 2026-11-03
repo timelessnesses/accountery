@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import jsQR from 'jsqr';
 
 type BankInfoObject = {
 	displayName: string;
@@ -53,23 +54,8 @@ export type SlipOkResponse =
 			data: SlipOkResponseObject;
 	  };
 
-import { readBarcodes, prepareZXingModule, ZXING_WASM_VERSION } from 'zxing-wasm/reader';
-
-// worker can't compile a WASM
-prepareZXingModule({
-	overrides: {
-		// @ts-expect-error - it's emscripten give it a break
-		locateFile: (path, prefix) => {
-			if (path.endsWith('.wasm')) {
-				return `https://unpkg.com/zxing-wasm@${ZXING_WASM_VERSION}/dist/full/${path}`;
-			}
-			return prefix + path;
-		}
-	}
-});
-
 /** Verify receipt bytes with SlipOK; recipient and duplicate checks live in D1. */
-export async function checkSlip(slipImage: ArrayBuffer, amount?: number): Promise<SlipOkResponse> {
+export async function checkSlip({slipImage, amount, imageBinding}:{slipImage: ArrayBuffer, amount?: number, imageBinding: ImagesBinding}): Promise<SlipOkResponse> {
 	const apiKey = env.SLIP_OK_API_KEY;
 	const apiEndpoint = env.SLIP_OK_API_ENDPOINT;
 	if (!apiKey || !apiEndpoint) {
@@ -78,9 +64,20 @@ export async function checkSlip(slipImage: ArrayBuffer, amount?: number): Promis
 	const body = new FormData();
 	// log:true also enforces the receiving account configured in SlipOK's LIFF.
 	// Our receiving account is configured in transfer_promptpay instead.
-	const data = await readBarcodes(slipImage, { formats: ['QR Code'], tryHarder: true });
+	const streamable = new Blob([slipImage]).stream();
+	const info = await imageBinding.info(streamable);
+	if (!("width" in info && "height" in info)) {
+		throw new Error('Failed to retrieve image dimensions from SlipOK API.');
+	}
+	const streamable2 = new Blob([slipImage]).stream();
+	const pixels = await imageBinding.input(streamable2)
+		.output({ format: "rgba"});
+	const data = jsQR(new Uint8ClampedArray((await (new Response(await pixels.image()).arrayBuffer()))), info.width, info.height);
+	if (!data) {
+		throw new Error('Failed to decode QR code from the provided slip image.');
+	}
 	body.set('log', 'false');
-	body.set('data', data[0].text);
+	body.set('data', data.data);
 	if (amount !== undefined) body.set('amount', String(amount));
 	const a = await fetch(apiEndpoint, {
 		method: 'POST',
