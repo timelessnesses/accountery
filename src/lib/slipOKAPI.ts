@@ -52,10 +52,53 @@ export type SlipOkResponse =
 	| {
 			success: true;
 			data: SlipOkResponseObject;
+	  }
+	| {
+			// this is only for SCB and Bua Luang (Bangkok) since they need "delay" after transaction has been completed for some reason?
+			code: 1010;
+			message: string;
+			data: {
+				qrcodeData: string;
+				bankCode: number;
+				bankName: string;
+				// Minutes to wait before retrying the request
+				delay: number;
+			};
+	  }
+	| {
+			// QR Code ไม่ใช่ QR สำหรับตรวจสอบการชำระเงิน
+			code: 1008;
+			message: string;
+	  }
+	| {
+			// QR Code หมดอายุ หรือ ไม่มีรายการอยู่จริง or No QR Code
+			code: 1007;
+			message: string;
+	  }
+	| {
+			// รูปภาพไม่ถูกต้อง
+			code: 1006;
+			message: string;
+	  }
+	| {
+			// Authorization Header ไม่ถูกต้อง
+			code: 1002;
+			message: string;
 	  };
 
+// Check with https://slipok.com/api-documentation/request-response-example/ for more info
+// Fuckass https://slipok.com/privacy-policy/ PDPA not compliant yet
+
 /** Verify receipt bytes with SlipOK; recipient and duplicate checks live in D1. */
-export async function checkSlip({slipImage, amount, imageBinding}:{slipImage: ArrayBuffer, amount?: number, imageBinding: ImagesBinding}): Promise<SlipOkResponse> {
+export async function checkSlip({
+	slipImage,
+	amount,
+	imageBinding
+}: {
+	slipImage: ArrayBuffer;
+	amount?: number;
+	imageBinding: ImagesBinding;
+}): Promise<SlipOkResponse> {
 	const apiKey = env.SLIP_OK_API_KEY;
 	const apiEndpoint = env.SLIP_OK_API_ENDPOINT;
 	if (!apiKey || !apiEndpoint) {
@@ -66,13 +109,16 @@ export async function checkSlip({slipImage, amount, imageBinding}:{slipImage: Ar
 	// Our receiving account is configured in transfer_promptpay instead.
 	const streamable = new Blob([slipImage]).stream();
 	const info = await imageBinding.info(streamable);
-	if (!("width" in info && "height" in info)) {
+	if (!('width' in info && 'height' in info)) {
 		throw new Error('Failed to retrieve image dimensions from SlipOK API.');
 	}
 	const streamable2 = new Blob([slipImage]).stream();
-	const pixels = await imageBinding.input(streamable2)
-		.output({ format: "rgba"});
-	const data = jsQR(new Uint8ClampedArray((await (new Response(await pixels.image()).arrayBuffer()))), info.width, info.height);
+	const pixels = await imageBinding.input(streamable2).output({ format: 'rgba' });
+	const data = jsQR(
+		new Uint8ClampedArray(await new Response(await pixels.image()).arrayBuffer()),
+		info.width,
+		info.height
+	);
 	if (!data) {
 		throw new Error('Failed to decode QR code from the provided slip image.');
 	}

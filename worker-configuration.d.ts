@@ -28,7 +28,7 @@ interface __BaseEnv_Env {
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
-		mainModule: typeof import("./.svelte-kit/cloudflare/_worker");
+		mainModule: typeof import('./.svelte-kit/cloudflare/_worker');
 	}
 	interface Env extends __BaseEnv_Env {}
 }
@@ -37,7 +37,28 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "PUBLIC_GOOGLE_OAUTH_CLIENT_ID" | "GOOGLE_OAUTH_CLIENT_SECRET" | "SLIP_OK_API_KEY" | "SLIP_OK_API_ENDPOINT" | "PUBLIC_RECEPIENT_EXPECTED_PROXY" | "PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING" | "PUBLIC_RECEPIENT_NAME_ENG" | "PUBLIC_RECEPIENT_NAME_THAI" | "ADMIN_EMAIL" | "PUBLIC_ORGANIZATION_DOMAIN" | "AUTHENTICATION_METHOD" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_D1_TOKEN" | "CLOUDFLARE_DATABASE_ID" | "RESEND_API_KEY" | "VAPID_PUBLIC_KEY" | "VAPID_PRIVATE_KEY">> {}
+	interface ProcessEnv extends StringifyValues<
+		Pick<
+			Cloudflare.Env,
+			| 'PUBLIC_GOOGLE_OAUTH_CLIENT_ID'
+			| 'GOOGLE_OAUTH_CLIENT_SECRET'
+			| 'SLIP_OK_API_KEY'
+			| 'SLIP_OK_API_ENDPOINT'
+			| 'PUBLIC_RECEPIENT_EXPECTED_PROXY'
+			| 'PUBLIC_RECEPIENT_EXPECTED_PROXY_VALUE_ENDING'
+			| 'PUBLIC_RECEPIENT_NAME_ENG'
+			| 'PUBLIC_RECEPIENT_NAME_THAI'
+			| 'ADMIN_EMAIL'
+			| 'PUBLIC_ORGANIZATION_DOMAIN'
+			| 'AUTHENTICATION_METHOD'
+			| 'CLOUDFLARE_ACCOUNT_ID'
+			| 'CLOUDFLARE_D1_TOKEN'
+			| 'CLOUDFLARE_DATABASE_ID'
+			| 'RESEND_API_KEY'
+			| 'VAPID_PUBLIC_KEY'
+			| 'VAPID_PRIVATE_KEY'
+		>
+	> {}
 }
 
 // Begin runtime types

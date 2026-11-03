@@ -31,14 +31,23 @@ export async function checkAndCacheSlip(
 		)
 		.bind(transactionId)
 		.first<{ slipok_response: string }>();
-	const response: SlipOkResponse = cached
+	let response: SlipOkResponse = cached
 		? JSON.parse(cached.slipok_response)
 		: await checkSlip({
+				slipImage: await readImage(),
+				amount,
+				imageBinding: imageBinding
+		});
+	if ("code" in response && response.code === 1010) {
+		// check again after the delay specified by SlipOK API for SCB and Bua Luang (Bangkok) banks
+		response = await checkSlip({
 			slipImage: await readImage(),
 			amount,
 			imageBinding: imageBinding
 		});
-	if (!cached && response.success && response.data?.success) {
+
+	}
+	if (!cached && ("success" in response) && response.success && response.data?.success) {
 		await db.batch([
 			db.prepare('DELETE FROM slipok_cache WHERE transaction_id = ?').bind(transactionId),
 			db
@@ -60,7 +69,7 @@ export async function approveVerifiedSlip(
 	transactionId: number,
 	response: SlipOkResponse
 ) {
-	if (!response.success || !response.data?.success) return false;
+	if (("success" in response) && (!response.success || !response.data?.success)) return false;
 	if (!(await isAutomaticSlipProcessingEnabled(db))) return false;
 	const slip = response.data;
 	const target = await getPromptPayTarget(db);

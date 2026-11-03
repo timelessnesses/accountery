@@ -11,7 +11,13 @@ export class DuplicateSlipError extends Error {
 }
 
 export async function submitPayment(
-	env: Pick<Env, 'AccountingDatabase' | 'AccountingReceipts' | 'NotificationQueue' | 'CloudflareImageManipulator5000'>,
+	env: Pick<
+		Env,
+		| 'AccountingDatabase'
+		| 'AccountingReceipts'
+		| 'NotificationQueue'
+		| 'CloudflareImageManipulator5000'
+	>,
 	email: string,
 	amount: number,
 	note: string,

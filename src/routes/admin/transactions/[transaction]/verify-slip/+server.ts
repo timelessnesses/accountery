@@ -40,7 +40,8 @@ export const POST = async ({ locals, params, platform }) => {
 	const slipKey = path.basename(transaction.image);
 	const slipObject = (await platform?.env.AccountingReceipts.get(slipKey)) as R2ObjectBody;
 	if (!slipObject) error(404, 'Slip image not found.');
-	if (!platform?.env.CloudflareImageManipulator5000) error(503, 'Cloudflare Image Manipulator is not configured.');
+	if (!platform?.env.CloudflareImageManipulator5000)
+		error(503, 'Cloudflare Image Manipulator is not configured.');
 	let result;
 	try {
 		result = await checkAndCacheSlip(
@@ -49,7 +50,7 @@ export const POST = async ({ locals, params, platform }) => {
 			transaction.amount,
 			() => slipObject.arrayBuffer(),
 			locals.user.email,
-			"user",
+			'user',
 			platform?.env.CloudflareImageManipulator5000
 		);
 	} catch (err) {
