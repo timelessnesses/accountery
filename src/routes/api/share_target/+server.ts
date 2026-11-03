@@ -21,7 +21,10 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const image = await file.arrayBuffer();
 	let response;
 	try {
-		response = await checkSlip(image);
+		response = await checkSlip({
+			slipImage: image,
+			imageBinding: env.CloudflareImageManipulator5000
+		});
 	} catch (e) {
 		console.error({
 			message: 'SlipOK API error',
@@ -31,7 +34,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		});
 		return fail('verification-unavailable');
 	}
-	if (!response.success || !response.data?.success) return fail('invalid-slip');
+	if (("success" in response) && (!response.success || !response.data?.success)) return fail('invalid-slip');
 	const amount = response.data.amount;
 	try {
 		validateAmount(amount);
