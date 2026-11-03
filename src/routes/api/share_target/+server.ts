@@ -28,7 +28,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			error: e instanceof Error ? e.message : String(e),
 			stack: e instanceof Error ? e.stack : undefined,
 			errorMessage: e instanceof Error ? e.message : undefined
-		})
+		});
 		return fail('verification-unavailable');
 	}
 	if (!response.success || !response.data?.success) return fail('invalid-slip');

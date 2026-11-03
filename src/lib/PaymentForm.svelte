@@ -7,7 +7,12 @@
 
 	import PromptPayQr from '$lib/PromptPayQr.svelte';
 
-	let { selectedWeek, nextDue, isAutomaticSlipCheckOn }: { selectedWeek?: AllocatedWeek; nextDue?: AllocatedWeek, isAutomaticSlipCheckOn?: boolean } = $props();
+	let {
+		selectedWeek,
+		nextDue,
+		isAutomaticSlipCheckOn
+	}: { selectedWeek?: AllocatedWeek; nextDue?: AllocatedWeek; isAutomaticSlipCheckOn?: boolean } =
+		$props();
 
 	let amount = $state<number | null>(null);
 	let note = $state('Paying Obligation');
@@ -74,7 +79,6 @@
 			submitting = false;
 		}
 	}
-
 </script>
 
 <div class="flex flex-col gap-5">
@@ -163,13 +167,7 @@
 					<label
 						class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-background px-3 py-4 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary"
 					>
-						<input
-							type="file"
-							accept="image/*"
-							class="hidden"
-							required
-							onchange={onFile}
-						/>
+						<input type="file" accept="image/*" class="hidden" required onchange={onFile} />
 						Upload a screenshot or photo
 					</label>
 				{/if}
@@ -197,7 +195,8 @@
 			{/if}
 			{#if isAutomaticSlipCheckOn}
 				<p class="text-center text-xs font-medium text-success">
-					Your bank slip will be forwarded to SlipOK for automatic verification. Please read the privacy policy and notice for details on how your data will be processed.
+					Your bank slip will be forwarded to SlipOK for automatic verification. Please read the
+					privacy policy and notice for details on how your data will be processed.
 				</p>
 			{/if}
 		</div>

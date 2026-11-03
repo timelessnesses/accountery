@@ -12,8 +12,11 @@ export const load: PageServerLoad = async ({ platform, setHeaders }) => {
 		error(404, 'The public payment summary is currently unavailable.');
 	const summary = await getPublicObligationSummary(database);
 	if (!summary) error(404, 'The public payment summary is currently unavailable.');
-	if (typeof summary.studentsWithUnpaidObligations === "number" && summary.studentsWithUnpaidObligations <= 10) {
-		summary.studentsWithUnpaidObligations = "<=10";
+	if (
+		typeof summary.studentsWithUnpaidObligations === 'number' &&
+		summary.studentsWithUnpaidObligations <= 10
+	) {
+		summary.studentsWithUnpaidObligations = '<=10';
 	}
 	return { summary };
 };

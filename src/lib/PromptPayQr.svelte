@@ -9,13 +9,9 @@
 	let downloadable_qr = $state('');
 	let message = $state('');
 	let loading = $state(false);
-	async function svgToPng(
-		svg: string,
-		width: number,
-		height: number
-	): Promise<Blob> {
+	async function svgToPng(svg: string, width: number, height: number): Promise<Blob> {
 		const svgBlob = new Blob([svg], {
-			type: "image/svg+xml;charset=utf-8"
+			type: 'image/svg+xml;charset=utf-8'
 		});
 
 		const url = URL.createObjectURL(svgBlob);
@@ -25,11 +21,11 @@
 			image.src = url;
 			await image.decode();
 
-			const canvas = document.createElement("canvas");
+			const canvas = document.createElement('canvas');
 			canvas.width = width;
 			canvas.height = height;
 
-			const ctx = canvas.getContext("2d")!;
+			const ctx = canvas.getContext('2d')!;
 
 			// Especially useful for QR codes
 			ctx.imageSmoothingEnabled = false;
@@ -37,21 +33,17 @@
 			ctx.drawImage(image, 0, 0, width, height);
 
 			const png = await new Promise<Blob>((resolve, reject) => {
-			canvas.toBlob(
-				blob => blob
-				? resolve(blob)
-				: reject(new Error("PNG conversion failed")),
-				"image/png"
-			);
+				canvas.toBlob(
+					(blob) => (blob ? resolve(blob) : reject(new Error('PNG conversion failed'))),
+					'image/png'
+				);
 			});
 
 			return png;
-		} 
-		catch (error) {
-			console.error("Error converting SVG to PNG:", error);
+		} catch (error) {
+			console.error('Error converting SVG to PNG:', error);
 			throw error;
-		}
-		finally {
+		} finally {
 			URL.revokeObjectURL(url);
 		}
 	}
@@ -62,7 +54,7 @@
 		downloadable_qr = '';
 		message = '';
 		loading = false;
-		console.log("hello?")
+		console.log('hello?');
 		try {
 			validateAmount(value ?? 0);
 		} catch {
@@ -73,7 +65,7 @@
 		let objectUrl = '';
 		loading = true;
 		const timer = setTimeout(async () => {
-			console.log("fetching qr")
+			console.log('fetching qr');
 			try {
 				const response = await fetch(`${resolve('/api/promptpay')}?amount=${value}`, {
 					signal: controller.signal
@@ -93,11 +85,11 @@
 				console.error(err);
 				if (!controller.signal.aborted) message = (err as Error).message;
 			} finally {
-				console.log("finally?")
+				console.log('finally?');
 				if (!controller.signal.aborted) loading = false;
 			}
 		}, 250);
-		console.log("hi?")
+		console.log('hi?');
 		return () => {
 			clearTimeout(timer);
 			controller.abort();

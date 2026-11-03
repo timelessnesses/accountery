@@ -16,7 +16,12 @@ export async function queue(batch: MessageBatch<NotificationMessage>, env: Notif
 			if (err instanceof AggregateError) {
 				console.error(`Notification delivery failed (${err.errors.length} failures)`);
 				for (const e of err.errors) {
-					console.error(' -', e instanceof Error ? `${e.message} (status ${(e as any).statusCode ?? 'n/a'})` : String(e));
+					console.error(
+						' -',
+						e instanceof Error
+							? `${e.message} (status ${(e as any).statusCode ?? 'n/a'})`
+							: String(e)
+					);
 				}
 			} else {
 				console.error('Notification delivery failed:', err);

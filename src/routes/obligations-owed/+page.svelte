@@ -89,8 +89,8 @@
 			<div>
 				<h2>Payment overview</h2>
 				<p class="mt-1 max-w-2xl text-sm text-muted-foreground">
-					Combined totals across payable obligations, excluding exemptions. No names, account details,
-					or individual balances are published.
+					Combined totals across payable obligations, excluding exemptions. No names, account
+					details, or individual balances are published.
 				</p>
 			</div>
 			<Button variant="outline" size="sm" disabled={refreshing} onclick={refresh}
@@ -174,9 +174,9 @@
 					>.
 				</p>
 				<p class="mt-2 text-xs">
-					Each student's payable obligations are counted separately. Exempt obligations are excluded.
-					Partial payments remain unfulfilled until fully paid. Approved payments cover the oldest
-					payable obligations first.
+					Each student's payable obligations are counted separately. Exempt obligations are
+					excluded. Partial payments remain unfulfilled until fully paid. Approved payments cover
+					the oldest payable obligations first.
 				</p>
 			</div>
 		</section>

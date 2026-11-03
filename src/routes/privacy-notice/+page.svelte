@@ -101,7 +101,8 @@
 			<p class="text-xs font-medium tracking-widest text-primary">ACCOUNTERY · ก่อนเริ่มใช้งาน</p>
 			<h1 class="mt-2 text-2xl font-semibold">ประกาศความเป็นส่วนตัว</h1>
 			<p class="mt-2 text-sm text-muted-foreground">
-				โปรดอ่านประกาศฉบับ {PRIVACY_NOTICE_LABEL} ก่อนดำเนินการต่อ เมื่อกดดำเนินการต่อ ถือว่ารับทราบประกาศความเป็นส่วนตัว และยอมรับข้อกำหนดการใช้งาน
+				โปรดอ่านประกาศฉบับ {PRIVACY_NOTICE_LABEL} ก่อนดำเนินการต่อ เมื่อกดดำเนินการต่อ ถือว่ารับทราบประกาศความเป็นส่วนตัว
+				และยอมรับข้อกำหนดการใช้งาน
 			</p>
 		</div>
 		<a
@@ -118,7 +119,8 @@
 			aria-label="Privacy notice version 1.0.0"
 		>
 			<div class="border-b border-border px-5 py-3 text-xs text-muted-foreground">
-				นโยบาย, ประกาศความเป็นส่วนตัวและข้อกำหนดการใช้งาน (Privacy Policy, Privacy Notice & Term of Service) · เวอร์ชัน {PRIVACY_NOTICE_LABEL}
+				นโยบาย, ประกาศความเป็นส่วนตัวและข้อกำหนดการใช้งาน (Privacy Policy, Privacy Notice & Term of
+				Service) · เวอร์ชัน {PRIVACY_NOTICE_LABEL}
 			</div>
 			<!-- svelte-ignore a11y_no_noninteractive_tabindex (The scrollable notice needs keyboard focus so it can be read without a pointer.) -->
 			<div
