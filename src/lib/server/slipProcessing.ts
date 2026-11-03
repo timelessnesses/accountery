@@ -20,7 +20,8 @@ export async function checkAndCacheSlip(
 	amount: number,
 	readImage: () => Promise<ArrayBuffer>,
 	actor: string,
-	actorType: 'user' | 'application' = 'user'
+	actorType: 'user' | 'application' = 'user',
+	imageBinding: ImagesBinding
 ) {
 	const cached = await db
 		.prepare(
@@ -32,7 +33,11 @@ export async function checkAndCacheSlip(
 		.first<{ slipok_response: string }>();
 	const response: SlipOkResponse = cached
 		? JSON.parse(cached.slipok_response)
-		: await checkSlip(await readImage(), amount);
+		: await checkSlip({
+			slipImage: await readImage(),
+			amount,
+			imageBinding: imageBinding
+		});
 	if (!cached && response.success && response.data?.success) {
 		await db.batch([
 			db.prepare('DELETE FROM slipok_cache WHERE transaction_id = ?').bind(transactionId),
@@ -108,7 +113,8 @@ export async function automaticallyProcessSlip(
 	transactionId: number,
 	amount: number,
 	image: ArrayBuffer,
-	email: string
+	email: string,
+	imageBinding: ImagesBinding
 ) {
 	if (!(await isAutomaticSlipProcessingEnabled(db))) return false;
 	if (!(await getPromptPayTarget(db))) return false;
@@ -118,7 +124,8 @@ export async function automaticallyProcessSlip(
 		amount,
 		async () => image,
 		email,
-		'application'
+		'application',
+		imageBinding
 	);
 	return approveVerifiedSlip(db, transactionId, response);
 }

@@ -11,7 +11,7 @@ export class DuplicateSlipError extends Error {
 }
 
 export async function submitPayment(
-	env: Pick<Env, 'AccountingDatabase' | 'AccountingReceipts' | 'NotificationQueue'>,
+	env: Pick<Env, 'AccountingDatabase' | 'AccountingReceipts' | 'NotificationQueue' | 'CloudflareImageManipulator5000'>,
 	email: string,
 	amount: number,
 	note: string,
@@ -115,7 +115,8 @@ export async function submitPayment(
 						transactionId,
 						amount,
 						image.buffer as ArrayBuffer,
-						email
+						email,
+						env.CloudflareImageManipulator5000
 					);
 	} catch (err) {
 		console.error('Automatic slip processing failed; payment remains pending:', err);
