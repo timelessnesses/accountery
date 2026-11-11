@@ -46,8 +46,6 @@ export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
 		}
 	} else if (!event.locals.user && refresh_token) {
 		await refreshToken(event, env, refresh_token);
-	} else {
-		return redirect(302, resolve('/login'));
 	}
 	const bootstrap = isBootstrapAdministrator(
 		event.locals.user,
