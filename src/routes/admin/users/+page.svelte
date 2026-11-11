@@ -200,7 +200,7 @@
 		studentNicknameChangedTo = '';
 	}
 	async function confirmStudentChange() {
-		if (previewStudents.length === 0) return;
+		if (!userToChange) return;
 		importing = true;
 
 		fetch(resolve(`/admin/users/${userToChange?.email}/change-details`), {
@@ -462,38 +462,47 @@
 
 			<div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Student Email</span>
+					<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+						>Student Email</span
+					>
 					<input
-						type="text"
+						type="email"
 						bind:value={studentEmailChangedTo}
 						placeholder="e.g. student@tsu.ac.th"
-						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
-							placeholder:text-muted-foreground
-							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+						class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-sm transition-colors
+							placeholder:text-muted-foreground/70
+							hover:border-ring/50
+							focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
 					/>
 				</label>
 
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Student name</span>
+					<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+						>Student Name</span
+					>
 					<input
 						type="text"
 						bind:value={studentNameChangedTo}
 						placeholder="e.g. John Doe"
-						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
-							placeholder:text-muted-foreground
-							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+						class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-sm transition-colors
+							placeholder:text-muted-foreground/70
+							hover:border-ring/50
+							focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
 					/>
 				</label>
 
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Student nickname</span>
+					<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+						>Student Nickname</span
+					>
 					<input
 						type="text"
 						bind:value={studentNicknameChangedTo}
 						placeholder="e.g. John"
-						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
-							placeholder:text-muted-foreground
-							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+						class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-sm transition-colors
+							placeholder:text-muted-foreground/70
+							hover:border-ring/50
+							focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
 					/>
 				</label>
 			</div>
@@ -548,49 +557,63 @@
 					class="flex flex-col gap-1.5 sm:col-span-3 items-center text-center"
 					for="sheetNumber"
 				>
-					<span class="text-sm font-medium">Sheet Number</span>
+					<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+						>Sheet Number</span
+					>
 					<input
+						id="sheetNumber"
 						type="number"
+						min="1"
 						bind:value={sheetNumber}
 						placeholder="e.g. 1"
-						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
-							placeholder:text-muted-foreground
-							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+						class="h-10 w-32 rounded-lg border border-input bg-background px-3 text-center text-sm shadow-sm transition-colors
+							placeholder:text-muted-foreground/70
+							hover:border-ring/50
+							focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
 					/>
 				</label>
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Student ID column</span>
+					<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+						>Student ID Column</span
+					>
 					<input
 						type="text"
 						bind:value={idColumn}
 						placeholder="e.g. A"
-						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
-							placeholder:text-muted-foreground
-							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+						class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm uppercase shadow-sm transition-colors
+							placeholder:normal-case placeholder:text-muted-foreground/70
+							hover:border-ring/50
+							focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
 					/>
 				</label>
 
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Student name column</span>
+					<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+						>Student Name Column</span
+					>
 					<input
 						type="text"
 						bind:value={nameColumn}
 						placeholder="e.g. B"
-						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
-							placeholder:text-muted-foreground
-							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+						class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm uppercase shadow-sm transition-colors
+							placeholder:normal-case placeholder:text-muted-foreground/70
+							hover:border-ring/50
+							focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
 					/>
 				</label>
 
 				<label class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Student nickname column</span>
+					<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+						>Student Nickname Column</span
+					>
 					<input
 						type="text"
 						bind:value={nicknameColumn}
 						placeholder="e.g. C (optional)"
-						class="rounded-md border bg-background px-3 py-2 text-sm shadow-sm
-							placeholder:text-muted-foreground
-							focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+						class="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm uppercase shadow-sm transition-colors
+							placeholder:normal-case placeholder:text-muted-foreground/70
+							hover:border-ring/50
+							focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
 					/>
 				</label>
 			</div>

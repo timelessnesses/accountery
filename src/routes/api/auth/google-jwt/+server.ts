@@ -6,7 +6,10 @@ import { requireLoginUser } from '$lib/server/loginUser';
 import { getInstanceStatus, isBootstrapAdministrator } from '$lib/server/instanceLifecycle';
 import { resolve } from '$app/paths';
 import { PRIVACY_NOTICE_VERSION } from '$lib/privacyNotice';
-import { ACCOUNTERY_EXPIRE_JWT_TIME, ACCOUNTERY_EXPIRE_REFRESH_TOKEN_TIME } from '$lib/constants.js';
+import {
+	ACCOUNTERY_EXPIRE_JWT_TIME,
+	ACCOUNTERY_EXPIRE_REFRESH_TOKEN_TIME
+} from '$lib/constants.js';
 import { issuingNewSessionToken } from '$lib/stuff.js';
 
 export type GoogleJwtRequest = {
@@ -42,12 +45,13 @@ export async function POST({ request, cookies, platform }) {
 	}
 
 	const studentID = payload.email.split('@')[0];
+	const adminEmail = platform?.env.ADMIN_EMAIL ?? envPrivate.ADMIN_EMAIL;
 
-	const loginUser = await requireLoginUser(accountingDatabase, payload.email);
+	const loginUser = await requireLoginUser(accountingDatabase, payload.email, adminEmail);
 	const instanceStatus = await getInstanceStatus(accountingDatabase);
 	const bootstrap = isBootstrapAdministrator(
 		{ email: payload.email, admin: true, name: '', nickname: '' },
-		platform?.env.ADMIN_EMAIL ?? envPrivate.ADMIN_EMAIL
+		adminEmail
 	);
 	if (instanceStatus === 'destroying' && !bootstrap)
 		error(503, 'This instance is being destroyed.');
@@ -65,6 +69,7 @@ export async function POST({ request, cookies, platform }) {
 		payload.email,
 		accountingDatabase,
 		platform?.env.SharedSecrets as SecretsStoreSecret,
+		adminEmail,
 		instanceStatus === 'destroying'
 	);
 	const random_id = crypto.getRandomValues(new Uint8Array(32));

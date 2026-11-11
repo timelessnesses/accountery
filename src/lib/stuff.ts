@@ -1,6 +1,6 @@
-import { error } from "@sveltejs/kit";
-import { requireLoginUser } from "./server/loginUser";
-import * as jose from "jose";
+import { error } from '@sveltejs/kit';
+import { requireLoginUser } from './server/loginUser';
+import * as jose from 'jose';
 
 export function turnThisToUint8Array(secret: string): Uint8Array {
 	const uint8Array = Uint8Array.from(atob(secret), (c) => c.charCodeAt(0));
@@ -11,9 +11,10 @@ export async function issuingNewSessionToken(
 	studentEmail: string,
 	database: D1Database,
 	secret: SecretsStoreSecret,
+	adminEmail: string,
 	skipMetadataWrites = false
 ) {
-	const stmt = await requireLoginUser(database, studentEmail);
+	const stmt = await requireLoginUser(database, studentEmail, adminEmail);
 
 	if (!(await secret.get())) {
 		throw error(500, 'Shared secret is not set in environment variables.');

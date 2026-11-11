@@ -49,7 +49,7 @@
 		data-audit-highlight={page.url.searchParams.has('fromLog') ? '' : undefined}
 		use:auditFocus={page.url.searchParams.has('fromLog')}
 	>
-		<AdminPageHeader title={info.name} description={info.email}>
+		<AdminPageHeader title={`${info.name} (${info.nickname})`} description={info.email}>
 			<UserDeparture user={data.user} />
 		</AdminPageHeader>
 	</div>

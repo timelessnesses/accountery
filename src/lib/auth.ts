@@ -26,7 +26,7 @@ export async function verifyJWT(
 	if (!payload.sub) {
 		throw new Error('Invalid JWT token.');
 	}
-	const user = await requireLoginUser(env.AccountingDatabase, payload.sub);
+	const user = await requireLoginUser(env.AccountingDatabase, payload.sub, env.ADMIN_EMAIL);
 
 	return {
 		email: payload.sub as string,

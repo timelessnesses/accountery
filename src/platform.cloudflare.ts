@@ -78,6 +78,9 @@ export async function scheduled(
 	}
 }
 
-async function deleteOldRefreshTokens(database: D1Database, now: number) { 
-	await database.prepare('UPDATE users SET refresh_token = NULL, refresh_when = 0 WHERE refresh_when < ?').bind(now - 30 * 24 * 3600).run();
+async function deleteOldRefreshTokens(database: D1Database, now: number) {
+	await database
+		.prepare('UPDATE users SET refresh_token = NULL, refresh_when = 0 WHERE refresh_when < ?')
+		.bind(now - 30 * 24 * 3600)
+		.run();
 }

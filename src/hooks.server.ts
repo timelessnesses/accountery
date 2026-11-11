@@ -1,13 +1,13 @@
 import { base, resolve } from '$app/paths';
 import { building } from '$app/environment';
 import { verifyJWT } from '$lib/auth';
-import { json, redirect, type Handle } from '@sveltejs/kit';
+import { json, redirect, type Handle, type RequestEvent } from '@sveltejs/kit';
 import { env as privateEnv } from '$env/dynamic/private';
 import { getInstanceLifecycle, isBootstrapAdministrator } from '$lib/server/instanceLifecycle';
 import { PRIVACY_NOTICE_VERSION, safeNoticeReturnTo } from '$lib/privacyNotice';
 import { issuingNewSessionToken, turnThisToUint8Array } from '$lib/stuff';
 import { ACCOUNTERY_EXPIRE_JWT_TIME } from '$lib/constants';
-import { User } from '$lib/types/AccountingDatabaseTypes';
+import type { User } from '$lib/types/AccountingDatabaseTypes';
 
 const publicRoutes = ['/login', '/login/__data.json', '/api/auth/google-jwt', '/api/auth/logout'];
 export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
@@ -41,35 +41,13 @@ export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
 					event.locals.user = user;
 				}
 			} catch (error) {
-				console.error('Error verifying session token:', error);
-				event.locals.user = undefined;
-				event.cookies.set('token', '', { path: '/', expires: new Date(0) });
-				if (refresh_token) { 
-					const refreshTokenHash = await crypto.subtle.digest('SHA-256', turnThisToUint8Array(refresh_token)).then((hash) => {
-						return btoa(String.fromCharCode(...new Uint8Array(hash)));
-					});
-					const userWithRefreshToken = await env.AccountingDatabase.prepare('SELECT * FROM users WHERE refresh_token = ? AND refresh_when < ?').bind(refreshTokenHash, Date.now()).first<User>();
-					if (userWithRefreshToken) {
-						const newJWT = await issuingNewSessionToken(
-							userWithRefreshToken.email,
-							env.AccountingDatabase,
-							env.SharedSecrets as SecretsStoreSecret
-						);
-						event.cookies.set('token', newJWT, {
-							path: '/',
-							// httpOnly: true,
-							sameSite: 'strict',
-							// secure: true,
-							maxAge: ACCOUNTERY_EXPIRE_JWT_TIME
-						});
-					} else {
-						return redirect(302, resolve('/login'));
-					}
-				} else {
-					return redirect(302, resolve('/login'));
-				}
+				console.error('JWT verification failed:', error);
 			}
 		}
+	} else if (!event.locals.user && refresh_token) {
+		await refreshToken(event, env, refresh_token);
+	} else {
+		return redirect(302, resolve('/login'));
 	}
 	const bootstrap = isBootstrapAdministrator(
 		event.locals.user,
@@ -153,3 +131,34 @@ export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
 	}
 	return resolveRequest(event);
 };
+
+async function refreshToken(event: RequestEvent, env: Env, refresh_token: string) {
+	event.cookies.set('token', '', { path: '/', expires: new Date(0) });
+	event.locals.user = undefined;
+	const refreshTokenHash = await crypto.subtle
+		.digest('SHA-256', turnThisToUint8Array(refresh_token) as BufferSource)
+		.then((hash) => btoa(String.fromCharCode(...new Uint8Array(hash))));
+	// refresh_when is stored in seconds; a token is valid for 30 days after issue.
+	const refreshCutoff = Math.floor(Date.now() / 1000) - 30 * 24 * 3600;
+	const userWithRefreshToken = await env.AccountingDatabase.prepare(
+		'SELECT * FROM users WHERE refresh_token = ? AND refresh_when >= ?'
+	)
+		.bind(refreshTokenHash, refreshCutoff)
+		.first<User>();
+	if (userWithRefreshToken) {
+		const newJWT = await issuingNewSessionToken(
+			userWithRefreshToken.email,
+			env.AccountingDatabase,
+			env.SharedSecrets as SecretsStoreSecret,
+			env.ADMIN_EMAIL
+		);
+		event.locals.user = await verifyJWT(newJWT, env);
+		event.cookies.set('token', newJWT, {
+			path: '/',
+			// httpOnly: true,
+			sameSite: 'strict',
+			// secure: true,
+			maxAge: ACCOUNTERY_EXPIRE_JWT_TIME
+		});
+	}
+}

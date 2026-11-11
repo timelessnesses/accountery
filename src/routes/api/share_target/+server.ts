@@ -34,7 +34,8 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		});
 		return fail('verification-unavailable');
 	}
-	if (("success" in response) && (!response.success || !response.data?.success)) return fail('invalid-slip');
+	if ('success' in response && (!response.success || !response.data?.success))
+		return fail('invalid-slip');
 	const amount = response.data.amount;
 	try {
 		validateAmount(amount);
