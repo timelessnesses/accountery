@@ -1,0 +1,2 @@
+export const ACCOUNTERY_EXPIRE_JWT_TIME = 3600; // 1 hour
+export const ACCOUNTERY_EXPIRE_REFRESH_TOKEN_TIME = 3600 * 24 * 30; // 30 days

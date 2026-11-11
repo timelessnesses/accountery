@@ -35,6 +35,7 @@ export async function scheduled(
 	controller: ScheduledController,
 	env: NotificationEnv & Pick<Env, 'AccountingReceipts'>
 ) {
+	await deleteOldRefreshTokens(env.AccountingDatabase, Date.now());
 	if (await runScheduledInstanceDestruction(env, controller.scheduledTime / 1000)) return;
 	// One hourly trigger checks for missing weekly obligations and runs reminders at 09:00 Bangkok.
 	await newWeeklyObligations(
@@ -75,4 +76,8 @@ export async function scheduled(
 			} satisfies NotificationMessage);
 		}
 	}
+}
+
+async function deleteOldRefreshTokens(database: D1Database, now: number) { 
+	await database.prepare('UPDATE users SET refresh_token = NULL, refresh_when = 0 WHERE refresh_when < ?').bind(now - 30 * 24 * 3600).run();
 }

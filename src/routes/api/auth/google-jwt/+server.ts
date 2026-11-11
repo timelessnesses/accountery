@@ -2,11 +2,12 @@ import { env as envPrivate } from '$env/dynamic/private';
 import { env as envPublic } from '$env/dynamic/public';
 import { error } from '@sveltejs/kit';
 import { OAuth2Client } from 'google-auth-library';
-import * as jose from 'jose';
 import { requireLoginUser } from '$lib/server/loginUser';
 import { getInstanceStatus, isBootstrapAdministrator } from '$lib/server/instanceLifecycle';
 import { resolve } from '$app/paths';
 import { PRIVACY_NOTICE_VERSION } from '$lib/privacyNotice';
+import { ACCOUNTERY_EXPIRE_JWT_TIME, ACCOUNTERY_EXPIRE_REFRESH_TOKEN_TIME } from '$lib/constants.js';
+import { issuingNewSessionToken } from '$lib/stuff.js';
 
 export type GoogleJwtRequest = {
 	id_token: string;
@@ -66,12 +67,28 @@ export async function POST({ request, cookies, platform }) {
 		platform?.env.SharedSecrets as SecretsStoreSecret,
 		instanceStatus === 'destroying'
 	);
+	const random_id = crypto.getRandomValues(new Uint8Array(32));
+	const base64ized = btoa(String.fromCharCode(...random_id));
+	const refresh_token = await crypto.subtle.digest('SHA-256', random_id).then((hash) => {
+		return btoa(String.fromCharCode(...new Uint8Array(hash)));
+	});
+	await accountingDatabase
+		.prepare('UPDATE users SET refresh_token = ?, refresh_when = ? WHERE email = ?')
+		.bind(refresh_token, Math.floor(Date.now() / 1000), payload.email)
+		.run();
 	cookies.set('token', id, {
 		path: '/',
 		// httpOnly: true,
 		sameSite: 'strict',
 		// secure: true,
-		maxAge: 3600
+		maxAge: ACCOUNTERY_EXPIRE_JWT_TIME
+	});
+	cookies.set('refresh_token', base64ized, {
+		path: '/',
+		// httpOnly: true,
+		sameSite: 'strict',
+		// secure: true,
+		maxAge: ACCOUNTERY_EXPIRE_REFRESH_TOKEN_TIME
 	});
 	if (instanceStatus !== 'destroying')
 		await accountingDatabase
@@ -98,43 +115,4 @@ export async function POST({ request, cookies, platform }) {
 		}),
 		{ status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
 	);
-}
-
-async function issuingNewSessionToken(
-	studentEmail: string,
-	database: D1Database,
-	secret: SecretsStoreSecret,
-	skipMetadataWrites = false
-) {
-	const stmt = await requireLoginUser(database, studentEmail);
-
-	if (!(await secret.get())) {
-		throw error(500, 'Shared secret is not set in environment variables.');
-	}
-
-	const sessionToken = await new jose.SignJWT({
-		role: stmt.role,
-		name: stmt.name,
-		nickname: stmt.nickname
-	})
-		.setIssuedAt()
-		.setExpirationTime('1h')
-		.setSubject(studentEmail)
-		.setProtectedHeader({
-			alg: 'HS256',
-			typ: 'JWT'
-		})
-		.sign(turnThisToUint8Array(await secret.get()));
-
-	if (!skipMetadataWrites)
-		await database
-			.prepare('UPDATE users SET logged_in_when = ?, session_expiry = ? WHERE email = ?')
-			.bind(Math.floor(Date.now() / 1000), Math.floor(Date.now() / 1000) + 3600, studentEmail)
-			.run();
-	return sessionToken;
-}
-
-function turnThisToUint8Array(secret: string): Uint8Array {
-	const uint8Array = Uint8Array.from(atob(secret), (c) => c.charCodeAt(0));
-	return uint8Array;
 }

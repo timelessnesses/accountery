@@ -5,12 +5,13 @@ import { json, redirect, type Handle } from '@sveltejs/kit';
 import { env as privateEnv } from '$env/dynamic/private';
 import { getInstanceLifecycle, isBootstrapAdministrator } from '$lib/server/instanceLifecycle';
 import { PRIVACY_NOTICE_VERSION, safeNoticeReturnTo } from '$lib/privacyNotice';
+import { issuingNewSessionToken, turnThisToUint8Array } from '$lib/stuff';
+import { ACCOUNTERY_EXPIRE_JWT_TIME } from '$lib/constants';
+import { User } from '$lib/types/AccountingDatabaseTypes';
 
 const publicRoutes = ['/login', '/login/__data.json', '/api/auth/google-jwt', '/api/auth/logout'];
 export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
 	const path = event.url.pathname.slice(base.length);
-	// The public privacy policy is also rendered during prerendering, where
-	// no database or session is available. Do not exempt /privacy-notice here.
 	if (
 		['/privacy', '/privacy/', '/privacy/__data.json'].includes(path) &&
 		['GET', 'HEAD'].includes(event.request.method)
@@ -31,6 +32,7 @@ export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
 			}
 		);
 	const token = event.cookies.get('token');
+	const refresh_token = event.cookies.get('refresh_token');
 	if (token) {
 		if (env.AUTHENTICATION_METHOD === 'JWT') {
 			try {
@@ -42,6 +44,30 @@ export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
 				console.error('Error verifying session token:', error);
 				event.locals.user = undefined;
 				event.cookies.set('token', '', { path: '/', expires: new Date(0) });
+				if (refresh_token) { 
+					const refreshTokenHash = await crypto.subtle.digest('SHA-256', turnThisToUint8Array(refresh_token)).then((hash) => {
+						return btoa(String.fromCharCode(...new Uint8Array(hash)));
+					});
+					const userWithRefreshToken = await env.AccountingDatabase.prepare('SELECT * FROM users WHERE refresh_token = ? AND refresh_when < ?').bind(refreshTokenHash, Date.now()).first<User>();
+					if (userWithRefreshToken) {
+						const newJWT = await issuingNewSessionToken(
+							userWithRefreshToken.email,
+							env.AccountingDatabase,
+							env.SharedSecrets as SecretsStoreSecret
+						);
+						event.cookies.set('token', newJWT, {
+							path: '/',
+							// httpOnly: true,
+							sameSite: 'strict',
+							// secure: true,
+							maxAge: ACCOUNTERY_EXPIRE_JWT_TIME
+						});
+					} else {
+						return redirect(302, resolve('/login'));
+					}
+				} else {
+					return redirect(302, resolve('/login'));
+				}
 			}
 		}
 	}

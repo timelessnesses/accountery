@@ -9,6 +9,7 @@ export type User = {
 	left_at: number | null;
 	anonymized_at: number | null;
 	privacy_policy_read_version: number;
+	refresh_token: string;
 };
 
 export type Transaction = {

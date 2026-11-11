@@ -1,0 +1,2 @@
+-- Migration number: 0029 	 2026-11-11T03:33:48.341Z
+ALTER TABLE "users" ADD COLUMN "refresh_when" INTEGER NOT NULL DEFAULT 0;
