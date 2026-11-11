@@ -5,7 +5,6 @@
 	import { auditFocus } from '$lib/auditFocus';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import PromptPayQr from '$lib/PromptPayQr.svelte';
-	import Lightbox from '$lib/Lightbox.svelte';
 	import { parsePromptPayPayload, targetLabels, type PromptPayTarget } from '$lib/promptpay';
 	let { data, form } = $props();
 	let payload = $state('');
@@ -243,4 +242,3 @@
 		</section>
 	</div>
 </main>
-<Lightbox />

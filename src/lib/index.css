@@ -160,3 +160,76 @@ body {
 	font-size: 0.7rem;
 	font-weight: 600;
 }
+
+/* Small iPhones (iPhone SE 1-3, iPhone 6/7/8: 320-375px CSS width).
+   FullCalendar's toolbar and month grid keep their intrinsic widths and
+   overflow the card, so force them to fit the available column. */
+@media (max-width: 400px) {
+	.fc .fc-scrollgrid,
+	.fc .fc-scrollgrid-sync-table,
+	.fc .fc-daygrid-body {
+		width: 100% !important;
+		min-width: 0 !important;
+	}
+	.fc .fc-scrollgrid {
+		table-layout: fixed !important;
+	}
+	.fc .fc-toolbar.fc-header-toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.fc .fc-toolbar-chunk {
+		display: flex;
+		justify-content: center;
+	}
+	.fc .fc-toolbar-title {
+		font-size: 1rem;
+	}
+	.fc .fc-button {
+		padding: 0.25rem 0.5rem;
+		font-size: 0.75rem;
+	}
+	.fc .fc-daygrid-day-number,
+	.fc .fc-col-header-cell-cushion {
+		padding-left: 0.125rem;
+		padding-right: 0.125rem;
+		font-size: 0.65rem;
+	}
+	.fc .fc-daygrid-event {
+		padding: 0 2px;
+		border-radius: 0.25rem;
+		overflow-wrap: anywhere;
+	}
+	.fc .fc-daygrid-event .fc-event-title {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+}
+
+/* Keep month rows compact on phone and tablet screens so the full grid fits. */
+@media (max-width: 1023px) {
+	.fc .fc-daygrid-day-frame {
+		min-height: 0 !important;
+	}
+	.fc .fc-daygrid-day-events {
+		min-height: 0 !important;
+		margin-bottom: 0 !important;
+	}
+	.fc .fc-daygrid-event {
+		min-height: 11px;
+		margin-top: 1px;
+		padding: 0 2px;
+		border-radius: 2px;
+		white-space: nowrap;
+	}
+	.fc .fc-daygrid-event .fc-event-title {
+		display: block;
+		overflow: hidden;
+		font-size: 7px;
+		line-height: 11px;
+		text-overflow: ellipsis;
+	}
+}

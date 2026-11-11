@@ -32,7 +32,7 @@
 
 <div class="flex h-full min-h-0 flex-col rounded-xl border border-border bg-card">
 	<div class="flex items-center justify-between border-b border-border px-3 py-2.5">
-		<h2 class="text-xs font-semibold text-card-foreground">Transaction log</h2>
+		<h2 class="m-0! text-base! font-semibold text-card-foreground">Transaction log</h2>
 		<span class="text-xs text-muted-foreground">{entries.length}</span>
 	</div>
 
@@ -41,7 +41,7 @@
 	{:else}
 		<ul class="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
 			{#each entries as p (p.id)}
-				<li class="group flex items-start gap-2 px-3 py-2.5">
+				<li class="group flex items-start gap-2 px-3 py-2">
 					<span
 						class={'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ' +
 							statusClass[p.approved]}
@@ -102,15 +102,17 @@
 								{p.approved}
 							</span>
 						</div>
-						<p class="truncate text-xs text-muted-foreground">{formatDate(p.date.toISOString())}</p>
+							<p class="m-0 truncate text-xs text-muted-foreground">
+								{formatDate(p.date.toISOString())}
+							</p>
 						{#if p.description}
-							<p class="truncate text-xs text-muted-foreground/80">{p.description}</p>
+								<p class="m-0 truncate text-xs text-muted-foreground/80">{p.description}</p>
 						{/if}
-						{#if p.approved === 'rejected' && p.reject_reason}<p class="mt-1 text-xs text-danger">
+							{#if p.approved === 'rejected' && p.reject_reason}<p class="m-0 mt-1 text-xs text-danger">
 								Reason: {p.reject_reason}
 							</p>{/if}
 						{#if p.approved === 'voided' && p.void_reason}<p
-								class="mt-1 text-xs text-muted-foreground"
+									class="m-0 mt-1 text-xs text-muted-foreground"
 							>
 								Void reason: {p.void_reason}
 							</p>{/if}

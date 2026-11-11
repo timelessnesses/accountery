@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { lightbox } from '$lib/LightboxManager.svelte';
 	import { currency } from '$lib/payments.svelte';
@@ -9,6 +10,27 @@
 	let downloadable_qr = $state('');
 	let message = $state('');
 	let loading = $state(false);
+	let root: HTMLDivElement;
+	let qrSize = $state(96);
+
+	onMount(() => {
+		const measure = () => {
+			const { width, height } = root.getBoundingClientRect();
+			const phoneLayout = window.matchMedia('(max-width: 480px)').matches;
+			const availableWidth = width - (phoneLayout ? 12 : 18);
+			const availableHeight = height - (phoneLayout ? 44 : 104);
+			const size = Math.min(availableWidth, availableHeight, 320);
+			qrSize = Math.max(50, Math.floor(size));
+		};
+		const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : undefined;
+		observer?.observe(root);
+		if (!observer) window.addEventListener('resize', measure);
+		measure();
+		return () => {
+			observer?.disconnect();
+			window.removeEventListener('resize', measure);
+		};
+	});
 	async function svgToPng(svg: string, width: number, height: number): Promise<Blob> {
 		const svgBlob = new Blob([svg], {
 			type: 'image/svg+xml;charset=utf-8'
@@ -98,33 +120,52 @@
 	});
 </script>
 
-<div class="flex flex-col items-center gap-3" aria-live="polite" aria-busy={loading}>
+<div
+	bind:this={root}
+	class="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-2 max-[480px]:gap-1!"
+	style={`--qr-size: ${qrSize}px`}
+	aria-live="polite"
+	aria-busy={loading}
+>
 	{#if qr}
 		<button
 			type="button"
 			onclick={() => lightbox.open(qr, `PromptPay · ${currency.format(amount!)}`)}
-			class="overflow-hidden rounded-xl border border-border bg-white p-2 transition hover:border-primary focus-visible:outline-2 focus-visible:outline-primary"
+			class="overflow-hidden rounded-xl border border-border bg-white p-2 transition hover:border-primary focus-visible:outline-2 focus-visible:outline-primary max-[480px]:p-1!"
 			aria-label="Enlarge PromptPay QR code"
 		>
-			<img src={qr} alt="PromptPay QR for {currency.format(amount!)}" class="h-52 w-52" />
+			<img
+				src={qr}
+				alt="PromptPay QR for {currency.format(amount!)}"
+				class="qr-square"
+			/>
 		</button>
-		<p class="text-2xl font-semibold tabular-nums text-foreground">{currency.format(amount!)}</p>
-		<!-- QR downloads use a browser-created blob URL, not an application route. -->
-		<!-- eslint-disable svelte/no-navigation-without-resolve -->
-		<a
-			href={downloadable_qr}
-			download="promptpay-{amount!.toFixed(2)}.png"
-			class="text-xs font-medium text-primary underline underline-offset-4">Download QR</a
-		>
-		<!-- eslint-enable svelte/no-navigation-without-resolve -->
-		<p class="text-center text-xs leading-relaxed text-muted-foreground">
-			Scan with your banking app and confirm the recipient before paying.
-		</p>
+		<div class="flex items-center justify-center gap-3">
+			<p class="m-0 text-base font-semibold tabular-nums text-foreground">{currency.format(amount!)}</p>
+			<!-- QR downloads use a browser-created blob URL, not an application route. -->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -->
+			<a
+				href={downloadable_qr}
+				download="promptpay-{amount!.toFixed(2)}.png"
+				class="text-xs font-medium text-primary underline underline-offset-4">Download QR</a
+			>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
+		</div>
 	{:else}
 		<div
-			class="flex min-h-52 w-full items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 p-5 text-center text-sm text-muted-foreground"
+			class="flex min-h-0 w-full flex-1 items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 p-3 text-center text-sm text-muted-foreground max-[480px]:p-2 max-[480px]:text-xs"
 		>
 			{loading ? 'Generating your QR…' : message}
 		</div>
 	{/if}
 </div>
+
+<style>
+	.qr-square {
+		width: var(--qr-size);
+		height: var(--qr-size);
+		max-width: 100%;
+		aspect-ratio: 1;
+		object-fit: contain;
+	}
+</style>

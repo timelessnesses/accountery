@@ -82,16 +82,19 @@
 />
 <header class="app-header border-b border-border bg-card">
 	<div
-		class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+		class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 max-[480px]:gap-1 max-[480px]:px-3 max-[480px]:py-1.5"
 	>
-		<div class="flex items-start justify-between gap-3 sm:items-center sm:justify-start">
-			<div class="flex items-center gap-3">
+		<div
+			class="flex min-w-0 items-start justify-between gap-3 sm:items-center sm:justify-start max-[480px]:gap-2"
+		>
+			<div class="flex min-w-0 flex-1 items-center gap-3 max-[480px]:gap-2.5">
 				<div
-					class="flex h-15 w-15 items-center justify-center rounded-lg bg-primary text-primary-foreground"
+					class="flex h-15 w-15 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground max-[480px]:h-10 max-[480px]:w-10"
 				>
 					<svg
 						width="100"
 						height="100"
+						class="size-10 max-[480px]:size-7"
 						viewBox="0 0 24 24"
 						fill="none"
 						stroke="currentColor"
@@ -104,11 +107,16 @@
 						/></svg
 					>
 				</div>
-				<div>
-					<h1 class="text-sm font-semibold leading-tight text-card-foreground">
+				<div class="min-w-0">
+					<!-- m-0: Bootstrap's reboot adds p/h1 margins on top of Tailwind's reset -->
+					<h1
+						class="m-0 text-sm font-semibold leading-tight text-card-foreground max-[480px]:truncate max-[480px]:text-[22px]! max-[340px]:text-lg!"
+					>
 						Weekly Payments{admin ? ': Admin page' : ''}
 					</h1>
-					<p class="text-xs text-muted-foreground">Track and clear your weekly obligations</p>
+					<p class="m-0 text-xs text-muted-foreground max-[480px]:truncate max-[480px]:text-[10px]">
+						Track and clear your weekly obligations
+					</p>
 					{#if publicObligationsEnabled}
 						<a
 							href={resolve('/obligations-owed')}
@@ -121,7 +129,7 @@
 			<div class="relative sm:hidden">
 				<button
 					onclick={() => (accountMenuOpen = !accountMenuOpen)}
-					class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-muted"
+					class="flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-muted max-[480px]:h-9 max-[480px]:w-9"
 					aria-expanded={accountMenuOpen}
 					aria-haspopup="menu"
 					aria-label="Open account menu"
@@ -334,59 +342,68 @@
 			</div>
 		</div>
 		{#if showBalances}
-			<div class="mt-2 grid grid-cols-3 gap-2 sm:hidden" style="margin-bottom: 0 !important;">
-				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
+			<div
+				class="mt-2 grid grid-cols-3 gap-2 sm:hidden max-[480px]:mt-1 max-[480px]:gap-1"
+				style="margin-bottom: 0 !important;"
+			>
+				<div
+					class="rounded-xl border border-border bg-background px-2 py-2 text-center shadow-sm max-[480px]:rounded-lg max-[480px]:px-1 max-[480px]:py-0.5"
+				>
 					<p
-						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground"
+						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground max-[480px]:text-[8px]"
 						style="margin-bottom: 0 !important;"
 					>
 						Net
 					</p>
 					{#if totalPaid < totalOwed}
 						<p
-							class="text-xs font-bold leading-tight text-red-500"
+							class="text-xs font-bold leading-tight text-red-500 max-[480px]:text-[11px]"
 							style="margin-bottom: 0 !important;"
 						>
 							{currency.format(totalPaid - totalOwed)}
 						</p>
 					{:else}
 						<p
-							class="text-xs font-bold leading-tight text-success"
+							class="text-xs font-bold leading-tight text-success max-[480px]:text-[11px]"
 							style="margin-bottom: 0 !important;"
 						>
 							{currency.format(totalPaid - totalOwed)}
 						</p>
 					{/if}
 				</div>
-				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
+				<div
+					class="rounded-xl border border-border bg-background px-2 py-2 text-center shadow-sm max-[480px]:rounded-lg max-[480px]:px-1 max-[480px]:py-0.5"
+				>
 					<p
-						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground"
+						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground max-[480px]:text-[8px]"
 						style="margin-bottom: 0 !important;"
 					>
 						Paid
 					</p>
 					<p
-						class="text-xs font-semibold leading-tight text-success"
+						class="text-xs font-semibold leading-tight text-success max-[480px]:text-[11px]"
 						style="margin-bottom: 0 !important;"
 					>
 						{currency.format(totalPaid)}
 					</p>
 					<p
-						class="text-[9px] leading-tight text-muted-foreground"
+						class="text-[9px] leading-tight text-muted-foreground max-[480px]:text-[8px]"
 						style="margin-bottom: 0 !important;"
 					>
 						+ {currency.format(totalPending)}
 					</p>
 				</div>
-				<div class="rounded-2xl border border-border bg-background px-2 py-2 text-center shadow-sm">
+				<div
+					class="rounded-xl border border-border bg-background px-2 py-2 text-center shadow-sm max-[480px]:rounded-lg max-[480px]:px-1 max-[480px]:py-0.5"
+				>
 					<p
-						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground"
+						class="text-[9px] uppercase tracking-[0.12em] text-muted-foreground max-[480px]:text-[8px]"
 						style="margin-bottom: 0 !important;"
 					>
 						Owed
 					</p>
 					<p
-						class="text-xs font-semibold leading-tight text-foreground"
+						class="text-xs font-semibold leading-tight text-foreground max-[480px]:text-[11px]"
 						style="margin-bottom: 0 !important;"
 					>
 						{currency.format(totalOwed)}

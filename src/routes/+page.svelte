@@ -3,7 +3,6 @@
 	import CalendarSync from '$lib/CalendarSync.svelte';
 	import PaymentForm from '$lib/PaymentForm.svelte';
 	import TransactionLog from '$lib/TransactionLog.svelte';
-	import Lightbox from '$lib/Lightbox.svelte';
 	import AppHeader from '$lib/AppHeader.svelte';
 	import { currency, formatWeekRange, type AllocatedWeek } from '$lib/payments.svelte';
 	import { page } from '$app/state';
@@ -58,7 +57,7 @@
 	const totalOwed = $derived(data.obligations.reduce((sum, ob) => sum + ob.amount, 0));
 </script>
 
-<div class="flex min-h-full flex-col bg-background">
+<div class="flex h-full min-h-0 flex-col bg-background">
 	<!-- Header -->
 	<AppHeader
 		user={data.user}
@@ -76,7 +75,7 @@
 			</p>
 		</div>
 	{/if}
-	<main class="mx-auto flex w-full max-w-7xl flex-1 gap-6 overflow-hidden p-4 sm:px-6 sm:py-6">
+	<main class="mx-auto flex w-full min-h-0 min-w-0 max-w-7xl flex-1 gap-6 overflow-hidden p-2 max-[480px]:p-1 max-[639px]:overflow-y-auto sm:gap-6 sm:p-4 sm:px-6 sm:py-6">
 		<!-- Transaction log (left of calendar on wide screens, History tab on mobile) -->
 		<aside
 			class="min-h-0 w-full shrink-0 lg:block lg:w-[240px] {mobilePanel === 'history'
@@ -88,34 +87,36 @@
 
 		<!-- Calendar panel -->
 		<section
-			class="min-h-0 flex-1 flex-col rounded-xl border border-border bg-card p-3 sm:p-4 {mobilePanel ===
+			class="min-h-0 min-w-0 flex-1 flex-col rounded-xl border border-border bg-card p-3 sm:p-4 {mobilePanel ===
 			'calendar'
 				? 'flex'
 				: 'hidden'} lg:flex"
 		>
-			<div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 px-1">
+			<div
+				class="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1 max-[480px]:flex-nowrap max-[480px]:justify-between max-[480px]:gap-1 max-[480px]:whitespace-nowrap"
+			>
 				{#each ['paid', 'partial', 'unpaid', 'waiting_approval', 'exempt'] as const as s (s)}
-					<div class="flex items-center gap-1.5">
-						<span class="h-2.5 w-2.5 rounded-full {statusMeta[s].dot}"></span>
-						<span class="text-xs text-muted-foreground">{statusMeta[s].label}</span>
+					<div class="flex items-center gap-1.5 max-[480px]:gap-0.5">
+						<span class="h-2.5 w-2.5 shrink-0 rounded-full {statusMeta[s].dot} max-[480px]:h-2 max-[480px]:w-2"></span>
+						<span class="text-xs text-muted-foreground max-[480px]:text-[9px]">{statusMeta[s].label}</span>
 					</div>
 				{/each}
 			</div>
-			<div class="mb-3 px-1"><CalendarSync /></div>
-			<div class="min-h-0 flex-1">
+			<div class="mb-1 px-1"><CalendarSync /></div>
+			<div class="min-h-0 flex-1 max-[1023px]:min-h-fit">
 				<PaymentCalendar weeks={data.allocatedWeeks} onselect={handleSelect} />
 			</div>
 		</section>
 
 		<!-- Payment panel -->
 		<aside
-			class="min-h-0 w-full flex-col overflow-y-auto lg:w-[360px] lg:shrink-0 {mobilePanel === 'pay'
+			class="min-h-0 w-full flex-col overflow-y-auto overscroll-contain lg:w-[360px] lg:shrink-0 {mobilePanel === 'pay'
 				? 'flex'
 				: 'hidden'} lg:flex"
 		>
 			{#if selectedWeek}
 				{@const meta = statusMeta[selectedWeek.status]}
-				<div class="mb-4 rounded-xl border border-border bg-card p-4">
+				<div class="mb-4 rounded-xl border border-border bg-card p-4 max-[480px]:mb-1 max-[480px]:p-2">
 					<div class="flex items-center justify-between">
 						<p class="text-xs font-medium text-muted-foreground">Selected obligation</p>
 						<button
@@ -154,7 +155,7 @@
 	<nav class="flex shrink-0 border-t border-border bg-card lg:hidden" aria-label="Panel switcher">
 		<button
 			onclick={() => (mobilePanel = 'calendar')}
-			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium {mobilePanel ===
+			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium max-[480px]:gap-0 max-[480px]:py-1 {mobilePanel ===
 			'calendar'
 				? 'text-primary'
 				: 'text-muted-foreground'}"
@@ -162,6 +163,7 @@
 			<svg
 				width="20"
 				height="20"
+				class="max-[480px]:h-4 max-[480px]:w-4"
 				viewBox="0 0 24 24"
 				fill="none"
 				stroke="currentColor"
@@ -175,7 +177,7 @@
 		</button>
 		<button
 			onclick={() => (mobilePanel = 'history')}
-			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium {mobilePanel ===
+			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium max-[480px]:gap-0 max-[480px]:py-1 {mobilePanel ===
 			'history'
 				? 'text-primary'
 				: 'text-muted-foreground'}"
@@ -183,6 +185,7 @@
 			<svg
 				width="20"
 				height="20"
+				class="max-[480px]:h-4 max-[480px]:w-4"
 				viewBox="0 0 24 24"
 				fill="none"
 				stroke="currentColor"
@@ -196,7 +199,7 @@
 		</button>
 		<button
 			onclick={() => (mobilePanel = 'pay')}
-			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium {mobilePanel ===
+			class="flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-medium max-[480px]:gap-0 max-[480px]:py-1 {mobilePanel ===
 			'pay'
 				? 'text-primary'
 				: 'text-muted-foreground'}"
@@ -204,6 +207,7 @@
 			<svg
 				width="20"
 				height="20"
+				class="max-[480px]:h-4 max-[480px]:w-4"
 				viewBox="0 0 24 24"
 				fill="none"
 				stroke="currentColor"
@@ -217,5 +221,3 @@
 		</button>
 	</nav>
 </div>
-
-<Lightbox />

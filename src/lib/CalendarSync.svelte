@@ -67,7 +67,7 @@
 						readonly
 						value={subscriptionUrl}
 						onclick={(event) => event.currentTarget.select()}
-						class="w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-foreground"
+						class="w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-base text-foreground"
 					/>
 				</label>
 				<p class="text-muted-foreground">
