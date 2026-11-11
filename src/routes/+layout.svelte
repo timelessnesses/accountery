@@ -11,8 +11,8 @@
 	let { children, data } = $props();
 </script>
 
-<div class="flex min-h-dvh flex-col bg-background text-foreground">
-	<div class="min-w-0 flex-1">{@render children()}</div>
+<div class="grid h-dvh min-h-0 grid-rows-[minmax(0,1fr)_auto] bg-background text-foreground">
+	<div class="min-h-0 min-w-0 overflow-y-auto">{@render children()}</div>
 	<footer class="border-t border-border bg-card">
 		<div
 			class="mx-auto grid w-full max-w-7xl grid-flow-col auto-cols-fr items-center gap-3 px-4 py-1.5 text-[10px] leading-tight text-muted-foreground sm:px-6 sm:py-2 sm:text-[11px] max-[480px]:flex max-[480px]:flex-wrap max-[480px]:items-center max-[480px]:justify-center max-[480px]:gap-x-2 max-[480px]:gap-y-0.5 max-[480px]:px-3 max-[480px]:py-1 max-[480px]:text-[9px]"
