@@ -27,7 +27,10 @@ export async function submitPayment(
 ) {
 	const db = env.AccountingDatabase;
 	const key = crypto.randomUUID();
-	await env.AccountingReceipts.put(key, image);
+	const webpified = await env.CloudflareImageManipulator5000.input(new Blob([image]).stream()).output({
+		format: "image/webp",
+	}).then((output) => output.response().arrayBuffer());
+	await env.AccountingReceipts.put(key, webpified);
 	let transactionId: number;
 	try {
 		const statements = [];

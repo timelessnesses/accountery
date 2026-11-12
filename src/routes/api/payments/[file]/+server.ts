@@ -25,7 +25,7 @@ export const GET = async ({ params, platform, locals }) => {
 		.run();
 	return new Response((await platform?.env.AccountingReceipts.get(params.file))?.body ?? null, {
 		headers: {
-			'Content-Type': 'image/png',
+			'Content-Type': 'image/webp',
 			'Cache-Control': 'private, no-store',
 			'X-Content-Type-Options': 'nosniff'
 		}

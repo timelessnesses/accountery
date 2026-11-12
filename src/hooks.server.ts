@@ -47,6 +47,7 @@ export const handle: Handle = async ({ event, resolve: resolveRequest }) => {
 	} else if (!event.locals.user && refresh_token) {
 		await refreshToken(event, env, refresh_token);
 	}
+	console.log(event.locals.user);
 	const bootstrap = isBootstrapAdministrator(
 		event.locals.user,
 		env.ADMIN_EMAIL ?? privateEnv.ADMIN_EMAIL
