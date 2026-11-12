@@ -11,7 +11,7 @@ export function isBootstrapAdministrator(user: App.Locals['user'], configuredEma
 	);
 }
 
-export function requireBootstrapAdministrator(user: App.Locals['user'], configuredEmail?: string) {
+export function requireBootstrapAdministrator(user: App.Locals['user'], configuredEmail: string) {
 	const admin = requireAdmin(user);
 	if (!isBootstrapAdministrator(admin, configuredEmail))
 		error(403, 'Only the bootstrapped administrator can manage instance destruction.');

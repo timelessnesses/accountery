@@ -3,7 +3,7 @@ import type { Transaction } from "$lib/types/AccountingDatabaseTypes";
 import { error } from "@sveltejs/kit";
 
 export const GET = async ({ platform, locals }) => {
-    requireBootstrapAdministrator(locals.user);
+    requireBootstrapAdministrator(locals.user, platform!.env.ADMIN_EMAIL);
     const shit = await platform?.env.AccountingDatabase.prepare("SELECT * FROM transactions").all<Transaction>();
     if (!shit) {
         error(404, "No transactions found");
