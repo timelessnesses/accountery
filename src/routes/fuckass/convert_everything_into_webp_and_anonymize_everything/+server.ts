@@ -1,7 +1,9 @@
+import { requireBootstrapAdministrator } from "$lib/server/instanceLifecycle.js";
 import type { Transaction } from "$lib/types/AccountingDatabaseTypes";
 import { error } from "@sveltejs/kit";
 
-export const GET = async ({ params, platform, locals }) => { 
+export const GET = async ({ platform, locals }) => {
+    requireBootstrapAdministrator(locals.user);
     const shit = await platform?.env.AccountingDatabase.prepare("SELECT * FROM transactions").all<Transaction>();
     if (!shit) {
         error(404, "No transactions found");
@@ -39,4 +41,7 @@ export const GET = async ({ params, platform, locals }) => {
         await platform?.env.AccountingReceipts.put(stripped, webpified);
     }
     await platform?.env.AccountingDatabase.batch(queriesForBatch);
+    return new Response(JSON.stringify({ message: "All images converted to WebP and anonymized successfully." }), {
+        headers: { "Content-Type": "application/json" },
+    });
 }
