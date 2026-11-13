@@ -7,13 +7,20 @@
 	"name": "accounting",
 	"main": ".svelte-kit/cloudflare/_worker.js",
 	"compatibility_date": "2026-06-21",
-	"compatibility_flags": ["nodejs_compat", "nodejs_als"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"nodejs_als"
+	],
 	"assets": {
 		"binding": "ASSETS",
 		"directory": ".svelte-kit/cloudflare"
 	},
 	"upload_source_maps": true,
-	"triggers": { "crons": ["0 * * * *"] },
+	"triggers": {
+		"crons": [
+			"0 * * * *"
+		]
+	},
 	"d1_databases": [
 		{
 			"binding": "AccountingDatabase",
@@ -51,7 +58,6 @@
 			}
 		]
 	},
-
 	"images": {
 		"binding": "CloudflareImageManipulator5000"
 	},
@@ -74,7 +80,13 @@
     "issue_detection": {
       "enabled": true
     }
-}
+	},
+	"kv_namespaces": [
+		{
+			"binding": "AccounteryCaching",
+			"id": "e6f5424583d74d0c852a01a82392c537"
+	}
+	]
 	/* 
 	"durable_objects": {
 		"bindings": [
